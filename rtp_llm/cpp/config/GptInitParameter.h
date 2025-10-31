@@ -293,6 +293,8 @@ public:
     MiscellaneousConfig          misc_config;
     ArpcConfig                   arpc_config;
     FfnDisAggregateConfig        ffn_disaggregate_config;
+    LinearAttentionConfig        linear_attention_config;
+    HybridAttentionConfig        hybrid_attention_config;
 
     GptInitParameter();
 

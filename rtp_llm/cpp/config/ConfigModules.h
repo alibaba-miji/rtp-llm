@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <sstream>
+#include <vector>
 
 namespace rtp_llm {
 
@@ -341,6 +342,27 @@ struct ArpcConfig {
     int         queueNum    = 50;
     int         ioThreadNum = 2;
     std::string to_string() const;
+};
+
+struct LinearAttentionConfig {
+    int         linear_conv_kernel_dim = 0;
+    int         linear_key_head_dim    = 0;
+    int         linear_num_key_heads   = 0;
+    int         linear_num_value_heads = 0;
+    int         linear_value_head_dim  = 0;
+    std::string to_string() const;
+};
+
+enum class HybridAttentionType {
+    NONE,
+    LINEAR,
+    SLIDING_WINDOW,
+};
+
+struct HybridAttentionConfig {
+    bool                             enable_hybrid_attention = false;
+    std::vector<HybridAttentionType> hybrid_attention_types;
+    std::string                      to_string() const;
 };
 
 std::string to_lower(const std::string& s);

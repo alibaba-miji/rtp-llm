@@ -28,7 +28,12 @@ def concat_0(ts: List[torch.Tensor]) -> torch.Tensor:
     if len(ts) == 1:
         return ts[0]
     # torch.concat() dose not support fp8 in current rocm torch version
-    if ts[0].dtype in [torch.float8_e4m3fn, torch.float8_e4m3fnuz, torch.float8_e5m2, torch.float8_e5m2fnuz]:
+    if ts[0].dtype in [
+        torch.float8_e4m3fn,
+        torch.float8_e4m3fnuz,
+        torch.float8_e5m2,
+        torch.float8_e5m2fnuz,
+    ]:
         dtype = ts[0].dtype
         out_u8 = torch.concat([x.view(torch.uint8) for x in ts], dim=0).contiguous()
         return out_u8.view(dtype)
@@ -815,9 +820,16 @@ def transpose_q_rope(
 def pad_w13(ts: List[torch.Tensor], inter_padding_size: int, dim: int):
     w1 = pad([ts[0]], inter_padding_size, dim)
     w3 = pad([ts[1]], inter_padding_size, dim)
-    if w1.dtype in [torch.float8_e4m3fn, torch.float8_e4m3fnuz, torch.float8_e5m2, torch.float8_e5m2fnuz]:
+    if w1.dtype in [
+        torch.float8_e4m3fn,
+        torch.float8_e4m3fnuz,
+        torch.float8_e5m2,
+        torch.float8_e5m2fnuz,
+    ]:
         dtype = w1.dtype
-        out_u8 = torch.concat([w1.view(torch.uint8), w3.view(torch.uint8)], dim=dim).contiguous()
+        out_u8 = torch.concat(
+            [w1.view(torch.uint8), w3.view(torch.uint8)], dim=dim
+        ).contiguous()
         return out_u8.view(dtype)
     else:
         return torch.concat([w1, w3], dim=dim).contiguous()
@@ -841,7 +853,12 @@ def concat_w13(ts: List[torch.Tensor]):
 
 def concat_w13_2(ts: List[torch.Tensor]):
     # torch.concat() dose not support fp8 in current rocm torch version
-    if ts[0].dtype in [torch.float8_e4m3fn, torch.float8_e4m3fnuz, torch.float8_e5m2, torch.float8_e5m2fnuz]:
+    if ts[0].dtype in [
+        torch.float8_e4m3fn,
+        torch.float8_e4m3fnuz,
+        torch.float8_e5m2,
+        torch.float8_e5m2fnuz,
+    ]:
         dtype = ts[0].dtype
         out_u8 = torch.concat([x.view(torch.uint8) for x in ts], dim=0).contiguous()
         return out_u8.view(dtype)
@@ -979,6 +996,19 @@ class W:
     post_ln_gamma = "post_layernorm_weights.gamma"
     post_ln_beta = "post_layernorm_weights.beta"
     linear_bias_slopes = "linear_bias_slopes"
+    attn_gate_w = "self_attention_weights.gate.weight"
+    attn_gate_s = "self_attention_weights.gate.scale"
+
+    # linear_attn_weights
+    linear_attn_qkvz_w = "linear_attn.in_proj_qkvz.weight"
+    linear_attn_qkvz_s = "linear_attn.in_proj_qkvz.scale"
+    linear_attn_ba_w = "linear_attn.in_proj_ba.weight"
+    linear_attn_norm_w = "linear_attn.norm.weight"
+    linear_attn_dt_b = "linear_attn.dt_bias"
+    linear_attn_conv1d_w = "linear_attn.conv1d.weight"
+    linear_attn_alog = "linear_attn.A_log"
+    linear_attn_out_w = "linear_attn.out_proj.weight"
+    linear_attn_out_s = "linear_attn.out_proj.scale"
 
     # jina_bert
     q_ln_gamma = "self_attention_weights.q_layernorm.gamma"
