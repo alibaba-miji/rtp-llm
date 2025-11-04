@@ -48,8 +48,8 @@ class FusedSiluActDenseMLP(nn.Module):
         super().__init__()
 
         assert (
-            config.activation_type == "SiGLU"
-        ), "FusedSiluActDenseMLP only supports SiGLU activation"
+            config.activation_type.lower() == "siglu" or "silu"
+        ), f"FusedSiluActDenseMLP only supports SiGLU/SiLU activation, actual: {config.activation_type}"
         self.config = config
 
         # Handle merged or separate weights

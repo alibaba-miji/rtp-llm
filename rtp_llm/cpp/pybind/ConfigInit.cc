@@ -466,34 +466,40 @@ void register_linear_attention_config(pybind11::module& m) {
 }
 // HybridAttentionConfig
 void register_hybrid_attention_config(pybind11::module& m) {
+    py::enum_<HybridAttentionType>(m, "HybridAttentionType")
+        .value("NONE", HybridAttentionType::NONE)
+        .value("LINEAR", HybridAttentionType::LINEAR)
+        .value("SLIDING_WINDOW", HybridAttentionType::SLIDING_WINDOW);
+
     pybind11::class_<HybridAttentionConfig>(m, "HybridAttentionConfig")
         .def(pybind11::init<bool, std::vector<HybridAttentionType>>(),
              pybind11::arg("enable_hybrid_attention") = false,
              pybind11::arg("hybrid_attention_types")  = std::vector<HybridAttentionType>{})
         .def("to_string", &HybridAttentionConfig::to_string)
         .def_readwrite("enable_hybrid_attention", &HybridAttentionConfig::enable_hybrid_attention)
+        .def_readwrite("hybrid_attention_types", &HybridAttentionConfig::hybrid_attention_types);
+}
 
-            void
-            registerGptInitParameter(py::module m) {
-        py::enum_<MlaOpsType>(m, "MlaOpsType")
-            .value("AUTO", MlaOpsType::AUTO)
-            .value("MHA", MlaOpsType::MHA)
-            .value("FLASH_INFER", MlaOpsType::FLASH_INFER)
-            .value("FLASH_MLA", MlaOpsType::FLASH_MLA);
+void registerGptInitParameter(py::module m) {
+    py::enum_<MlaOpsType>(m, "MlaOpsType")
+        .value("AUTO", MlaOpsType::AUTO)
+        .value("MHA", MlaOpsType::MHA)
+        .value("FLASH_INFER", MlaOpsType::FLASH_INFER)
+        .value("FLASH_MLA", MlaOpsType::FLASH_MLA);
 
-        py::enum_<EplbMode>(m, "EplbMode")
-            .value("NONE", EplbMode::NONE)
-            .value("STATS", EplbMode::STATS)
-            .value("EPLB", EplbMode::EPLB)
-            .value("ALL", EplbMode::ALL);
+    py::enum_<EplbMode>(m, "EplbMode")
+        .value("NONE", EplbMode::NONE)
+        .value("STATS", EplbMode::STATS)
+        .value("EPLB", EplbMode::EPLB)
+        .value("ALL", EplbMode::ALL);
 
-        pybind11::class_<EplbConfig>(m, "EplbConfig")
-            .def(pybind11::init<>())
-            .def_readwrite("mode", &EplbConfig::mode)
-            .def_readwrite("update_time", &EplbConfig::update_time)
-            .def("__eq__", &EplbConfig::operator==)
-            .def("__ne__", &EplbConfig::operator!=)
-            .def("__str__", &EplbConfig::toString);
+    pybind11::class_<EplbConfig>(m, "EplbConfig")
+        .def(pybind11::init<>())
+        .def_readwrite("mode", &EplbConfig::mode)
+        .def_readwrite("update_time", &EplbConfig::update_time)
+        .def("__eq__", &EplbConfig::operator==)
+        .def("__ne__", &EplbConfig::operator!=)
+        .def("__str__", &EplbConfig::toString);
 
 #define DEF_PROPERTY(name) .def_readwrite(#name, &RoleSpecialTokens::name##_)
 
@@ -501,7 +507,7 @@ void register_hybrid_attention_config(pybind11::module& m) {
     DEF_PROPERTY(token_ids)                                                                                            \
     DEF_PROPERTY(eos_token_ids)
 
-        pybind11::class_<RoleSpecialTokens>(m, "RoleSpecialTokens").def(pybind11::init<>()) REGISTER_PROPERTYS;
+    pybind11::class_<RoleSpecialTokens>(m, "RoleSpecialTokens").def(pybind11::init<>()) REGISTER_PROPERTYS;
 
 #undef DEF_PROPERTY
 #undef REGISTER_PROPERTYS
@@ -519,64 +525,58 @@ void register_hybrid_attention_config(pybind11::module& m) {
     DEF_PROPERTY(stop_words_str_list)                                                                                  \
     DEF_PROPERTY(pad_token_id)
 
-        pybind11::class_<SpecialTokens>(m, "SpecialTokens").def(pybind11::init<>()) REGISTER_PROPERTYS;
+    pybind11::class_<SpecialTokens>(m, "SpecialTokens").def(pybind11::init<>()) REGISTER_PROPERTYS;
 
 #undef DEF_PROPERTY
 #undef REGISTER_PROPERTYS
 
-        pybind11::class_<QuantAlgo>(m, "QuantAlgo")
-            .def(pybind11::init<>())  // quant_pre_scales
-            .def("setQuantAlgo",
-                 &QuantAlgo::setQuantAlgo,
-                 py::arg("quant_method"),
-                 py::arg("bits"),
-                 py::arg("group_size"))
-            .def("isWeightOnlyPerCol", &QuantAlgo::isWeightOnlyPerCol)
-            .def("isGptq", &QuantAlgo::isGptq)
-            .def("isAwq", &QuantAlgo::isAwq)
-            .def("isSmoothQuant", &QuantAlgo::isSmoothQuant)
-            .def("isOmniQuant", &QuantAlgo::isOmniQuant)
-            .def("isPerTensorQuant", &QuantAlgo::isPerTensorQuant)
-            .def("isFp8", &QuantAlgo::isFp8)
-            .def("isFp8PTPC", &QuantAlgo::isFp8PTPC)
-            .def("isQuant", &QuantAlgo::isQuant)
-            .def("isGroupwise", &QuantAlgo::isGroupwise)
-            .def("getGroupSize", &QuantAlgo::getGroupSize)
-            .def("getWeightBits", &QuantAlgo::getWeightBits)
-            .def("getActivationBits", &QuantAlgo::getActivationBits)
-            .def(py::pickle(
-                [](const QuantAlgo& quant_algo) {
-                    return py::make_tuple(int(quant_algo.getQuantMethod()),
-                                          int(quant_algo.getWeightBits()),
-                                          int(quant_algo.getGroupSize()),
-                                          int(quant_algo.getActivationBits()));
-                },
-                [](py::tuple t) {
-                    return QuantAlgo(QuantMethod(t[0].cast<int>()), t[1].cast<int>(), t[2].cast<int>());
-                }));
+    pybind11::class_<QuantAlgo>(m, "QuantAlgo")
+        .def(pybind11::init<>())  // quant_pre_scales
+        .def("setQuantAlgo", &QuantAlgo::setQuantAlgo, py::arg("quant_method"), py::arg("bits"), py::arg("group_size"))
+        .def("isWeightOnlyPerCol", &QuantAlgo::isWeightOnlyPerCol)
+        .def("isGptq", &QuantAlgo::isGptq)
+        .def("isAwq", &QuantAlgo::isAwq)
+        .def("isSmoothQuant", &QuantAlgo::isSmoothQuant)
+        .def("isOmniQuant", &QuantAlgo::isOmniQuant)
+        .def("isPerTensorQuant", &QuantAlgo::isPerTensorQuant)
+        .def("isFp8", &QuantAlgo::isFp8)
+        .def("isFp8PTPC", &QuantAlgo::isFp8PTPC)
+        .def("isQuant", &QuantAlgo::isQuant)
+        .def("isGroupwise", &QuantAlgo::isGroupwise)
+        .def("getGroupSize", &QuantAlgo::getGroupSize)
+        .def("getWeightBits", &QuantAlgo::getWeightBits)
+        .def("getActivationBits", &QuantAlgo::getActivationBits)
+        .def(py::pickle(
+            [](const QuantAlgo& quant_algo) {
+                return py::make_tuple(int(quant_algo.getQuantMethod()),
+                                      int(quant_algo.getWeightBits()),
+                                      int(quant_algo.getGroupSize()),
+                                      int(quant_algo.getActivationBits()));
+            },
+            [](py::tuple t) { return QuantAlgo(QuantMethod(t[0].cast<int>()), t[1].cast<int>(), t[2].cast<int>()); }));
 
-        pybind11::enum_<RoleType>(m, "RoleType")
-            .value("PDFUSION", RoleType::PDFUSION)
-            .value("PREFILL", RoleType::PREFILL)
-            .value("DECODE", RoleType::DECODE)
-            .value("VIT", RoleType::VIT)
-            .value("FRONTEND", RoleType::FRONTEND)
-            .def("__str__", [](RoleType role) {
-                switch (role) {
-                    case RoleType::PDFUSION:
-                        return "pd_fusion";
-                    case RoleType::PREFILL:
-                        return "prefill";
-                    case RoleType::DECODE:
-                        return "decode";
-                    case RoleType::VIT:
-                        return "vit";
-                    case RoleType::FRONTEND:
-                        return "FRONTEND";
-                    default:
-                        return "invalid";
-                }
-            });
+    pybind11::enum_<RoleType>(m, "RoleType")
+        .value("PDFUSION", RoleType::PDFUSION)
+        .value("PREFILL", RoleType::PREFILL)
+        .value("DECODE", RoleType::DECODE)
+        .value("VIT", RoleType::VIT)
+        .value("FRONTEND", RoleType::FRONTEND)
+        .def("__str__", [](RoleType role) {
+            switch (role) {
+                case RoleType::PDFUSION:
+                    return "pd_fusion";
+                case RoleType::PREFILL:
+                    return "prefill";
+                case RoleType::DECODE:
+                    return "decode";
+                case RoleType::VIT:
+                    return "vit";
+                case RoleType::FRONTEND:
+                    return "FRONTEND";
+                default:
+                    return "invalid";
+            }
+        });
 
 #define DEF_PROPERTY(name, member) .def_readwrite(#name, &GptInitParameter::member)
 
@@ -741,83 +741,83 @@ void register_hybrid_attention_config(pybind11::module& m) {
     DEF_PROPERTY(eplb_mode, eplb_mode_)                                                                                \
     DEF_PROPERTY(py_eplb, py_eplb_)
 
-        pybind11::class_<GptInitParameter>(m, "GptInitParameter")
-            .def(pybind11::init<int64_t,  // head_num
-                                int64_t,  // size_per_head
-                                int64_t,  // num_layers
-                                int64_t,  // max_seq_len
-                                int64_t,  // vocab_size
-                                int64_t   // hidden_size
-                                >(),
-                 py::arg("head_num"),
-                 py::arg("size_per_head"),
-                 py::arg("num_layers"),
-                 py::arg("max_seq_len"),
-                 py::arg("vocab_size"),
-                 py::arg("hidden_size"))
-            .def("insertMultiTaskPromptTokens",
-                 &GptInitParameter::insertMultiTaskPromptTokens,
-                 py::arg("task_id"),
-                 py::arg("tokens_id"))
-            .def("setLayerNormType", &GptInitParameter::setLayerNormType)
-            .def("setNormType", &GptInitParameter::setNormType)
-            .def("setActivationType", &GptInitParameter::setActivationType)
-            .def("setTaskType", &GptInitParameter::setTaskType, py::arg("task"))
-            .def("setDataType", &GptInitParameter::setDataType)
-            .def("setKvCacheDataType", &GptInitParameter::setKvCacheDataType)
-            .def("showDebugInfo", &GptInitParameter::showDebugInfo)
-            .def("isGatedActivation", &GptInitParameter::isGatedActivation)
-            .def("isKvCacheQuant", &GptInitParameter::isKvCacheQuant)
-            // 新增配置结构体成员暴露
-            .def_readwrite("parallelism_distributed_config", &GptInitParameter::parallelism_distributed_config)
-            .def_readwrite("concurrency_config", &GptInitParameter::concurrency_config)
-            .def_readwrite("fmha_config", &GptInitParameter::fmha_config)
-            .def_readwrite("kv_cache_config", &GptInitParameter::kv_cache_config)
-            .def_readwrite("profiling_debug_logging_config", &GptInitParameter::profiling_debug_logging_config)
-            .def_readwrite("hw_kernel_config", &GptInitParameter::hw_kernel_config)
-            .def_readwrite("device_resource_config", &GptInitParameter::device_resource_config)
-            .def_readwrite("sampler_config", &GptInitParameter::sampler_config)
-            .def_readwrite("moe_config", &GptInitParameter::moe_config)
-            .def_readwrite("model_specific_config", &GptInitParameter::model_specific_config)
-            .def_readwrite("sp_config", &GptInitParameter::sp_config)
-            .def_readwrite("service_discovery_config", &GptInitParameter::service_discovery_config)
-            .def_readwrite("cache_store_config", &GptInitParameter::cache_store_config)
-            .def_readwrite("scheduler_config", &GptInitParameter::scheduler_config)
-            .def_readwrite("batch_decode_scheduler_config", &GptInitParameter::batch_decode_scheduler_config)
-            .def_readwrite("fifo_scheduler_config", &GptInitParameter::fifo_scheduler_config)
-            .def_readwrite("misc_config", &GptInitParameter::misc_config)
-            .def_readwrite("arpc_config", &GptInitParameter::arpc_config)
-            .def_readwrite("ffn_disaggregate_config", &GptInitParameter::ffn_disaggregate_config)
-            .def_readwrite("linear_attention_config", &GptInitParameter::linear_attention_config)
-            .def_readwrite("hybrid_attention_config", &GptInitParameter::hybrid_attention_config) REGISTER_PROPERTYS;
-    }
+    pybind11::class_<GptInitParameter>(m, "GptInitParameter")
+        .def(pybind11::init<int64_t,  // head_num
+                            int64_t,  // size_per_head
+                            int64_t,  // num_layers
+                            int64_t,  // max_seq_len
+                            int64_t,  // vocab_size
+                            int64_t   // hidden_size
+                            >(),
+             py::arg("head_num"),
+             py::arg("size_per_head"),
+             py::arg("num_layers"),
+             py::arg("max_seq_len"),
+             py::arg("vocab_size"),
+             py::arg("hidden_size"))
+        .def("insertMultiTaskPromptTokens",
+             &GptInitParameter::insertMultiTaskPromptTokens,
+             py::arg("task_id"),
+             py::arg("tokens_id"))
+        .def("setLayerNormType", &GptInitParameter::setLayerNormType)
+        .def("setNormType", &GptInitParameter::setNormType)
+        .def("setActivationType", &GptInitParameter::setActivationType)
+        .def("setTaskType", &GptInitParameter::setTaskType, py::arg("task"))
+        .def("setDataType", &GptInitParameter::setDataType)
+        .def("setKvCacheDataType", &GptInitParameter::setKvCacheDataType)
+        .def("showDebugInfo", &GptInitParameter::showDebugInfo)
+        .def("isGatedActivation", &GptInitParameter::isGatedActivation)
+        .def("isKvCacheQuant", &GptInitParameter::isKvCacheQuant)
+        // 新增配置结构体成员暴露
+        .def_readwrite("parallelism_distributed_config", &GptInitParameter::parallelism_distributed_config)
+        .def_readwrite("concurrency_config", &GptInitParameter::concurrency_config)
+        .def_readwrite("fmha_config", &GptInitParameter::fmha_config)
+        .def_readwrite("kv_cache_config", &GptInitParameter::kv_cache_config)
+        .def_readwrite("profiling_debug_logging_config", &GptInitParameter::profiling_debug_logging_config)
+        .def_readwrite("hw_kernel_config", &GptInitParameter::hw_kernel_config)
+        .def_readwrite("device_resource_config", &GptInitParameter::device_resource_config)
+        .def_readwrite("sampler_config", &GptInitParameter::sampler_config)
+        .def_readwrite("moe_config", &GptInitParameter::moe_config)
+        .def_readwrite("model_specific_config", &GptInitParameter::model_specific_config)
+        .def_readwrite("sp_config", &GptInitParameter::sp_config)
+        .def_readwrite("service_discovery_config", &GptInitParameter::service_discovery_config)
+        .def_readwrite("cache_store_config", &GptInitParameter::cache_store_config)
+        .def_readwrite("scheduler_config", &GptInitParameter::scheduler_config)
+        .def_readwrite("batch_decode_scheduler_config", &GptInitParameter::batch_decode_scheduler_config)
+        .def_readwrite("fifo_scheduler_config", &GptInitParameter::fifo_scheduler_config)
+        .def_readwrite("misc_config", &GptInitParameter::misc_config)
+        .def_readwrite("arpc_config", &GptInitParameter::arpc_config)
+        .def_readwrite("ffn_disaggregate_config", &GptInitParameter::ffn_disaggregate_config)
+        .def_readwrite("linear_attention_config", &GptInitParameter::linear_attention_config)
+        .def_readwrite("hybrid_attention_config", &GptInitParameter::hybrid_attention_config) REGISTER_PROPERTYS;
+}
 
-    PYBIND11_MODULE(libth_transformer_config, m) {
-        register_parallelism_distributed_config(m);
-        register_concurrency_config(m);
-        register_fmha_config(m);
-        register_kvcache_config(m);
-        register_profiling_debug_logging_config(m);
-        register_hwkernel_config(m);
-        register_device_resource_config(m);
-        register_sampler_config(m);
-        register_moe_config(m);
-        register_model_specific_config(m);
-        register_speculative_execution_config(m);
-        register_service_discovery_config(m);
-        register_cache_store_config(m);
-        register_scheduler_config(m);
-        register_batch_decode_scheduler_config(m);
-        register_fifo_scheduler_config(m);
-        register_misc_config(m);
-        register_arpc_config(m);
-        registerFMHAType(m);
-        register_ffn_disaggregate_config(m);
-        register_linear_attention_config(m);
-        register_hybrid_attention_config(m);
-        registerGptInitParameter(m);
+PYBIND11_MODULE(libth_transformer_config, m) {
+    register_parallelism_distributed_config(m);
+    register_concurrency_config(m);
+    register_fmha_config(m);
+    register_kvcache_config(m);
+    register_profiling_debug_logging_config(m);
+    register_hwkernel_config(m);
+    register_device_resource_config(m);
+    register_sampler_config(m);
+    register_moe_config(m);
+    register_model_specific_config(m);
+    register_speculative_execution_config(m);
+    register_service_discovery_config(m);
+    register_cache_store_config(m);
+    register_scheduler_config(m);
+    register_batch_decode_scheduler_config(m);
+    register_fifo_scheduler_config(m);
+    register_misc_config(m);
+    register_arpc_config(m);
+    registerFMHAType(m);
+    register_ffn_disaggregate_config(m);
+    register_linear_attention_config(m);
+    register_hybrid_attention_config(m);
+    registerGptInitParameter(m);
 
-        registerCommon(m);
-    }
+    registerCommon(m);
+}
 
 }  // namespace rtp_llm

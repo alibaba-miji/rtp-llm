@@ -2,21 +2,24 @@ import logging
 from typing import Dict, Optional
 
 import torch
+import torch.nn.functional as F
 from torch import nn
 
 from rtp_llm.config.gpt_init_model_parameters import GptInitModelParameters
 from rtp_llm.model_loader.model_weight_info import ModelWeights
 from rtp_llm.models_py.model_desc.module_base import GptModelBase
+from rtp_llm.models_py.modules import FusedSiluActDenseMLP, Linear, RMSNorm, SelectTopk
 from rtp_llm.models_py.modules.attention import CausalAttention
 from rtp_llm.models_py.modules.embedding import Embedding
 from rtp_llm.models_py.modules.fmha import FMHAImplBase
-from rtp_llm.models_py.modules import Linear
-from rtp_llm.models_py.modules import FusedSiluActDenseMLP
 from rtp_llm.models_py.modules.moe import FusedMoe
 from rtp_llm.models_py.modules.moe.fused_moe_factory import FusedMoeFactory
-from rtp_llm.models_py.modules import RMSNorm
-from rtp_llm.models_py.modules import SelectTopk
-from rtp_llm.ops.compute_ops import KVCache, PyAttentionInputs, PyModelInputs, PyModelOutputs
+from rtp_llm.ops.compute_ops import (
+    KVCache,
+    PyAttentionInputs,
+    PyModelInputs,
+    PyModelOutputs,
+)
 from rtp_llm.utils.model_weight import W
 
 
@@ -33,7 +36,7 @@ class GenericMoeLayer(nn.Module):
         self.ffn_dim = config.moe_inter_padding_size
         self.num_experts = config.expert_num
         self.top_k = config.moe_k
-
+        # always use f16 for gate and shared gate
         self.gate = Linear(weights[W.moe_gate], None)
         self.select_topk = SelectTopk(config)
         self.fused_moe: FusedMoe = FusedMoeFactory.create_fused_moe(config, weights)
@@ -44,6 +47,15 @@ class GenericMoeLayer(nn.Module):
         ), "Weights w1 and w2 must be provided"
         self.num_local_experts = self.w1.shape[0]
         self.expert_map = self.build_expert_map()
+        self.add_shared_expert = config.moe_style == 2
+        if self.add_shared_expert:
+            self.shared_expert = FusedSiluActDenseMLP(config, weights)
+        else:
+            self.shared_expert = None
+        if weights.get(W.shared_expert_gate, None) is not None:
+            self.shared_expert_gate = Linear(weights[W.shared_expert_gate], None)
+        else:
+            self.shared_expert_gate = None
 
     def build_expert_map(self):
         """Build expert mapping for EP (Expert Parallelism)."""
@@ -71,16 +83,24 @@ class GenericMoeLayer(nn.Module):
             dtype=torch.int64,
             device=hidden_states.device,
         )
-        
-        self.select_topk(router_logits_fp32, topk_ids, topk_weights)
 
-        return self.fused_moe(
+        self.select_topk(router_logits_fp32, topk_ids, topk_weights)
+        experts_output = self.fused_moe(
             hidden_states=hidden_states,
             topk_weights=topk_weights,
             topk_ids=topk_ids,
             activation="SiGLU",
             expert_map=self.expert_map,
         )
+        if self.shared_expert is not None:
+            shared_expert_output = self.shared_expert(hidden_states)
+            if self.shared_expert_gate is not None:
+                shared_expert_output = (
+                    F.sigmoid(self.shared_expert_gate(hidden_states))
+                    * shared_expert_output
+                )
+            experts_output = experts_output + shared_expert_output
+        return experts_output
 
 
 class GenericMoeDecoderLayer(nn.Module):
@@ -98,24 +118,9 @@ class GenericMoeDecoderLayer(nn.Module):
 
         # Determine if this is a Dense layer (before first MoE layer or dense only)
         if layer_idx not in config.moe_layer_index:
-            self.is_dense_layer = True
+            self.mlp = FusedSiluActDenseMLP(config, weights)
         else:
-            self.is_dense_layer = False
-            self.moe_mlp = GenericMoeLayer(config, weights)
-
-        self.add_shared_expert = getattr(config, "moe_style", 1) == 2
-
-        # Try to create shared_mlp and catch errors if weights don't exist
-        self.shared_mlp = None
-        if self.is_dense_layer or self.add_shared_expert:
-            try:
-                self.shared_mlp = FusedSiluActDenseMLP(config, weights)
-            except (KeyError, AssertionError) as e:
-                # If weights don't exist, shared_mlp remains None
-                logging.warning(
-                    f"[GenericMoeDecoderLayer] Layer {self.layer_idx}: Failed to create shared_mlp: {e}"
-                )
-
+            self.mlp = GenericMoeLayer(config, weights)
         self.input_layernorm = RMSNorm(
             weights[W.pre_ln_gamma], eps=config.layernorm_eps
         )
@@ -141,21 +146,7 @@ class GenericMoeDecoderLayer(nn.Module):
         # MLP (Dense or MoE with optional shared experts)
         residual = hidden_states
         hidden_states = self.post_attention_layernorm(hidden_states)
-
-        if self.is_dense_layer:
-            # Dense layer uses shared_mlp (must exist)
-            assert self.shared_mlp is not None, "Dense layer must have shared_mlp"
-            hidden_states = self.shared_mlp(hidden_states)
-        else:
-            # MoE layer
-            experts_output = self.moe_mlp(hidden_states)
-
-            if self.shared_mlp is not None:
-                shared_mlp_output = self.shared_mlp(hidden_states)
-                hidden_states = experts_output + shared_mlp_output
-            else:
-                hidden_states = experts_output
-
+        hidden_states = self.mlp(hidden_states)
         hidden_states = residual + hidden_states
 
         return hidden_states

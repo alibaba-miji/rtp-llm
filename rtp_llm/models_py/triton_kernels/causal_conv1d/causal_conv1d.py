@@ -675,7 +675,8 @@ def causal_conv1d_fn(
     if batch_ptr.device != x.device:
         batch_ptr = batch_ptr.to(x.device)
         token_chunk_offset_ptr = token_chunk_offset_ptr.to(x.device)
-
+    # from rtp_llm.models_py.utils.debug import set_trace_on_tty
+    # set_trace_on_tty()
     _causal_conv1d_fwd_kernel[grid](
         # Pointers to matrices
         x,

@@ -98,4 +98,5 @@ class GptModelBase(nn.Module):
             impl = fmha_impl(self.config, attn_inputs)
             if impl.support():
                 return impl
+        return None
         raise Exception(f"can not find fmha type")

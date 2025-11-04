@@ -22,11 +22,13 @@ struct KVCache {
     torch::Tensor v_cache_base;
     torch::Tensor k_scale_base;
     torch::Tensor v_scale_base;
+    int           seq_size_per_block;
     int           layer_id = -1;
     KVCache       getLayerCache(int idx) {
         KVCache layer_cache;
-        layer_cache.k_cache_base = k_cache_base[idx];
-        layer_cache.v_cache_base = v_cache_base[idx];
+        layer_cache.k_cache_base       = k_cache_base[idx];
+        layer_cache.v_cache_base       = v_cache_base[idx];
+        layer_cache.seq_size_per_block = seq_size_per_block;
         if (k_scale_base.defined() && k_scale_base.numel() > 0) {
             layer_cache.k_scale_base = k_scale_base[idx];
             layer_cache.v_scale_base = v_scale_base[idx];

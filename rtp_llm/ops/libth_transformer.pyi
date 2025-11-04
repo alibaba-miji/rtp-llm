@@ -2,7 +2,7 @@ from __future__ import annotations
 import libth_transformer_config
 import torch
 import typing
-__all__: list[str] = ['EngineScheduleInfo', 'EngineTaskInfo', 'KVCacheInfo', 'MultimodalInput', 'RtpEmbeddingOp', 'RtpLLMOp', 'WorkerStatusInfo']
+__all__ = ['EngineScheduleInfo', 'EngineTaskInfo', 'KVCacheInfo', 'MultimodalInput', 'RtpEmbeddingOp', 'RtpLLMOp', 'WorkerStatusInfo']
 class EngineScheduleInfo:
     finished_task_info_list: list[EngineTaskInfo]
     last_schedule_delta: int

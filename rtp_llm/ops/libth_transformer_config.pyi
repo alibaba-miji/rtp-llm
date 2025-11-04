@@ -1,6 +1,6 @@
 from __future__ import annotations
 import typing
-__all__: list[str] = ['ArpcConfig', 'BatchDecodeSchedulerConfig', 'CacheStoreConfig', 'ConcurrencyConfig', 'DeviceResourceConfig', 'EplbConfig', 'EplbMode', 'FIFOSchedulerConfig', 'FMHAConfig', 'FMHAType', 'FfnDisAggregateConfig', 'GptInitParameter', 'HWKernelConfig', 'KVCacheConfig', 'MiscellaneousConfig', 'MlaOpsType', 'ModelSpecificConfig', 'MoeConfig', 'ParallelismDistributedConfig', 'ProfilingDebugLoggingConfig', 'QuantAlgo', 'RoleSpecialTokens', 'RoleType', 'SamplerConfig', 'SchedulerConfig', 'ServiceDiscoveryConfig', 'SpecialTokens', 'SpeculativeExecutionConfig', 'get_block_cache_keys']
+__all__ = ['ArpcConfig', 'BatchDecodeSchedulerConfig', 'CacheStoreConfig', 'ConcurrencyConfig', 'DeviceResourceConfig', 'EplbConfig', 'EplbMode', 'FIFOSchedulerConfig', 'FMHAConfig', 'FMHAType', 'FfnDisAggregateConfig', 'GptInitParameter', 'HWKernelConfig', 'HybridAttentionConfig', 'HybridAttentionType', 'KVCacheConfig', 'LinearAttentionConfig', 'MiscellaneousConfig', 'MlaOpsType', 'ModelSpecificConfig', 'MoeConfig', 'ParallelismDistributedConfig', 'ProfilingDebugLoggingConfig', 'QuantAlgo', 'RoleSpecialTokens', 'RoleType', 'SamplerConfig', 'SchedulerConfig', 'ServiceDiscoveryConfig', 'SpecialTokens', 'SpeculativeExecutionConfig', 'get_block_cache_keys']
 class ArpcConfig:
     ioThreadNum: int
     queueNum: int
@@ -273,6 +273,7 @@ class GptInitParameter:
     hidden_size: int
     http_port: int
     hw_kernel_config: HWKernelConfig
+    hybrid_attention_config: HybridAttentionConfig
     include_sep_tokens: bool
     input_embedding_scalar: float
     input_vocab_size: int
@@ -292,6 +293,7 @@ class GptInitParameter:
     layer_num: int
     layernorm_eps: float
     layernorm_type: str
+    linear_attention_config: LinearAttentionConfig
     load_cache_timeout_ms: int
     local_rank: int
     logit_scale: float
@@ -434,6 +436,53 @@ class HWKernelConfig:
         ...
     def update_from_env(self) -> None:
         ...
+class HybridAttentionConfig:
+    enable_hybrid_attention: bool
+    hybrid_attention_types: list[HybridAttentionType]
+    def __init__(self, enable_hybrid_attention: bool = False, hybrid_attention_types: list[HybridAttentionType] = []) -> None:
+        ...
+    def to_string(self) -> str:
+        ...
+class HybridAttentionType:
+    """
+    Members:
+    
+      NONE
+    
+      LINEAR
+    
+      SLIDING_WINDOW
+    """
+    LINEAR: typing.ClassVar[HybridAttentionType]  # value = <HybridAttentionType.LINEAR: 1>
+    NONE: typing.ClassVar[HybridAttentionType]  # value = <HybridAttentionType.NONE: 0>
+    SLIDING_WINDOW: typing.ClassVar[HybridAttentionType]  # value = <HybridAttentionType.SLIDING_WINDOW: 2>
+    __members__: typing.ClassVar[dict[str, HybridAttentionType]]  # value = {'NONE': <HybridAttentionType.NONE: 0>, 'LINEAR': <HybridAttentionType.LINEAR: 1>, 'SLIDING_WINDOW': <HybridAttentionType.SLIDING_WINDOW: 2>}
+    def __eq__(self, other: typing.Any) -> bool:
+        ...
+    def __getstate__(self) -> int:
+        ...
+    def __hash__(self) -> int:
+        ...
+    def __index__(self) -> int:
+        ...
+    def __init__(self, value: int) -> None:
+        ...
+    def __int__(self) -> int:
+        ...
+    def __ne__(self, other: typing.Any) -> bool:
+        ...
+    def __repr__(self) -> str:
+        ...
+    def __setstate__(self, state: int) -> None:
+        ...
+    def __str__(self) -> str:
+        ...
+    @property
+    def name(self) -> str:
+        ...
+    @property
+    def value(self) -> int:
+        ...
 class KVCacheConfig:
     enable_3fs: bool
     match_timeout_ms: int
@@ -454,6 +503,16 @@ class KVCacheConfig:
     def to_string(self) -> str:
         ...
     def update_from_env(self) -> None:
+        ...
+class LinearAttentionConfig:
+    linear_conv_kernel_dim: int
+    linear_key_head_dim: int
+    linear_num_key_heads: int
+    linear_num_value_heads: int
+    linear_value_head_dim: int
+    def __init__(self, linear_conv_kernel_dim: int = 0, linear_key_head_dim: int = 0, linear_num_key_heads: int = 0, linear_num_value_heads: int = 0, linear_value_head_dim: int = 0) -> None:
+        ...
+    def to_string(self) -> str:
         ...
 class MiscellaneousConfig:
     aux_string: str

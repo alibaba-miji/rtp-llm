@@ -46,6 +46,7 @@ from rtp_llm.ops import (
     GptInitParameter,
     HWKernelConfig,
     HybridAttentionConfig,
+    HybridAttentionType,
     KVCacheConfig,
     LinearAttentionConfig,
     MiscellaneousConfig,

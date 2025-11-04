@@ -6,7 +6,7 @@ import librtp_compute_ops
 import libth_transformer_config
 import torch
 import typing
-__all__: list[str] = ['FlashInferAttnParams', 'FlashInferDecodeOp', 'FlashInferPrefillOp', 'FusedMoEOp', 'FusedRopeKVCacheDecodeOp', 'FusedRopeKVCachePrefillOp', 'KVBlockArray', 'RtpProcessGroup', 'RtpProcessGroupType', 'SelectTopkOp', 'TRTAttn', 'TRTAttnOp', 'XQAAttnOp', 'XQAParams', 'cutlass_moe_mm', 'embedding', 'embedding_bert', 'fill_mla_params', 'fused_add_layernorm', 'fused_add_rmsnorm', 'fused_qk_rmsnorm', 'get_cutlass_batched_moe_mm_data', 'get_cutlass_moe_mm_data', 'get_cutlass_moe_mm_without_permute_info', 'layernorm', 'moe_post_reorder', 'moe_pre_reorder', 'moe_topk_softmax', 'per_tensor_quant_fp8', 'per_token_group_quant_fp8', 'per_token_group_quant_int8', 'per_token_quant_fp8', 'rmsnorm', 'silu_and_mul', 'trt_fp8_quantize_128', 'trt_fp8_quantize_128_inplace', 'write_cache_store']
+__all__ = ['FlashInferAttnParams', 'FlashInferDecodeOp', 'FlashInferPrefillOp', 'FusedMoEOp', 'FusedRopeKVCacheDecodeOp', 'FusedRopeKVCachePrefillOp', 'KVBlockArray', 'RtpProcessGroup', 'RtpProcessGroupType', 'SelectTopkOp', 'TRTAttn', 'embedding', 'embedding_bert', 'fused_add_layernorm', 'fused_add_rmsnorm', 'fused_qk_rmsnorm', 'layernorm', 'moe_topk_softmax', 'per_token_group_quant_fp8', 'per_token_group_quant_int8', 'rmsnorm', 'silu_and_mul', 'trt_fp8_quantize_128', 'trt_fp8_quantize_128_inplace', 'write_cache_store']
 class FlashInferAttnParams(librtp_compute_ops.ParamsBase):
     def __init__(self) -> None:
         ...
@@ -111,29 +111,6 @@ class SelectTopkOp:
 class TRTAttn(librtp_compute_ops.ParamsBase):
     def __init__(self) -> None:
         ...
-class TRTAttnOp:
-    def __init__(self, gpt_init_parameter: libth_transformer_config.GptInitParameter) -> None:
-        ...
-    def forward(self, input: torch.Tensor, kv_cache: librtp_compute_ops.KVCache | None, params: TRTAttn) -> torch.Tensor:
-        ...
-    def prepare(self, attn_inputs: librtp_compute_ops.PyAttentionInputs) -> librtp_compute_ops.ParamsBase:
-        ...
-    def support(self, attn_inputs: librtp_compute_ops.PyAttentionInputs) -> bool:
-        ...
-class XQAAttnOp:
-    def __init__(self, gpt_init_parameter: libth_transformer_config.GptInitParameter) -> None:
-        ...
-    def forward(self, input: torch.Tensor, kv_cache: librtp_compute_ops.KVCache | None, params: XQAParams) -> torch.Tensor:
-        ...
-    def prepare(self, attn_inputs: librtp_compute_ops.PyAttentionInputs) -> librtp_compute_ops.ParamsBase:
-        ...
-    def support(self, attn_inputs: librtp_compute_ops.PyAttentionInputs) -> bool:
-        ...
-class XQAParams(librtp_compute_ops.ParamsBase):
-    def __init__(self) -> None:
-        ...
-def cutlass_moe_mm(out_tensors: torch.Tensor, a_tensors: torch.Tensor, b_tensors: torch.Tensor, a_scales: torch.Tensor, b_scales: torch.Tensor, expert_offsets: torch.Tensor, problem_sizes: torch.Tensor, a_strides: torch.Tensor, b_strides: torch.Tensor, c_strides: torch.Tensor, per_act_token: bool, per_out_ch: bool) -> None:
-    ...
 def embedding(output: torch.Tensor, input: torch.Tensor, weight: torch.Tensor) -> None:
     """
     Embedding lookup kernel
@@ -142,8 +119,6 @@ def embedding_bert(output: torch.Tensor, input: torch.Tensor, weight: torch.Tens
     """
     EmbeddingBert lookup kernel
     """
-def fill_mla_params(t_prefill_lengths: torch.Tensor, t_sequence_lengths: torch.Tensor, t_input_lengths: torch.Tensor, t_kv_cache_block_id_host: torch.Tensor, seq_size_per_block: int) -> librtp_compute_ops.MlaParams:
-    ...
 def fused_add_layernorm(input: torch.Tensor, residual: torch.Tensor, bias: torch.Tensor, weight: torch.Tensor, beta: torch.Tensor, eps: float) -> None:
     """
     Fused Add LayerNorm kernel
@@ -156,30 +131,14 @@ def fused_qk_rmsnorm(IO: torch.Tensor, q_gamma: torch.Tensor, k_gamma: torch.Ten
     """
     Fused QK RMSNorm kernel
     """
-def get_cutlass_batched_moe_mm_data(expert_offsets: torch.Tensor, problem_sizes1: torch.Tensor, problem_sizes2: torch.Tensor, expert_num_tokens: torch.Tensor, num_local_experts: int, padded_m: int, n: int, k: int) -> None:
-    ...
-def get_cutlass_moe_mm_data(topk_ids: torch.Tensor, expert_offsets: torch.Tensor, problem_sizes1: torch.Tensor, problem_sizes2: torch.Tensor, input_permutation: torch.Tensor, output_permutation: torch.Tensor, num_experts: int, n: int, k: int, blockscale_offsets: torch.Tensor | None = None) -> None:
-    ...
-def get_cutlass_moe_mm_without_permute_info(topk_ids: torch.Tensor, problem_sizes1: torch.Tensor, problem_sizes2: torch.Tensor, num_experts: int, n: int, k: int, blockscale_offsets: torch.Tensor | None = None) -> None:
-    ...
 def layernorm(output: torch.Tensor, input: torch.Tensor, weight: torch.Tensor, beta: torch.Tensor, eps: float) -> None:
     """
     LayerNorm kernel
-    """
-def moe_post_reorder(permuted_hidden_states: torch.Tensor, topk_weights: torch.Tensor, inv_permuted_idx: torch.Tensor, expert_first_token_offset: torch.Tensor | None = None, topk: int, hidden_states: torch.Tensor) -> None:
-    """
-    moe ep unpermute kernel
-    """
-def moe_pre_reorder(input: torch.Tensor, topk_ids: torch.Tensor, token_expert_indices: torch.Tensor, expert_map: torch.Tensor | None = None, n_expert: int, n_local_expert: int, topk: int, align_block_size: int | None = None, permuted_input: torch.Tensor, expert_first_token_offset: torch.Tensor, inv_permuted_idx: torch.Tensor, permuted_idx: torch.Tensor) -> None:
-    """
-    moe ep permute kernel
     """
 def moe_topk_softmax(topk_weights: torch.Tensor, topk_indices: torch.Tensor, token_expert_indices: torch.Tensor, gating_output: torch.Tensor) -> None:
     """
     MoE Topk Softmax kernel
     """
-def per_tensor_quant_fp8(input: torch.Tensor, output_q: torch.Tensor, output_s: torch.Tensor, is_static: bool) -> None:
-    ...
 def per_token_group_quant_fp8(input: torch.Tensor, output_q: torch.Tensor, output_s: torch.Tensor, group_size: int, eps: float, fp8_min: float, fp8_max: float, scale_ue8m0: bool) -> None:
     """
     Fp8 Gemm Per Token Group
@@ -188,8 +147,6 @@ def per_token_group_quant_int8(input: torch.Tensor, output_q: torch.Tensor, outp
     """
     Int8 Gemm Per Token Group
     """
-def per_token_quant_fp8(input: torch.Tensor, output_q: torch.Tensor, output_s: torch.Tensor) -> None:
-    ...
 def rmsnorm(output: torch.Tensor, input: torch.Tensor, weight: torch.Tensor, eps: float, cuda_stream: int = 0) -> None:
     """
     RMSNorm kernel

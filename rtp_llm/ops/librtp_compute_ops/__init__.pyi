@@ -3,7 +3,7 @@ import libth_transformer_config
 import torch
 import typing
 from . import rtp_llm_ops
-__all__: list[str] = ['BertEmbeddingInputs', 'DeviceExporter', 'DeviceType', 'KVCache', 'MlaParams', 'ParamsBase', 'PyAttentionInputs', 'PyCacheStoreInputs', 'PyCaptureMetaData', 'PyModelInitResources', 'PyModelInputs', 'PyModelOutputs', 'TypeMeta', 'get_device', 'init_device', 'rtp_llm_ops']
+__all__ = ['BertEmbeddingInputs', 'DeviceExporter', 'DeviceType', 'KVCache', 'MlaParams', 'ParamsBase', 'PyAttentionInputs', 'PyCacheStoreInputs', 'PyCaptureMetaData', 'PyModelInitResources', 'PyModelInputs', 'PyModelOutputs', 'TypeMeta', 'get_device', 'init_device', 'rtp_llm_ops']
 class BertEmbeddingInputs:
     @typing.overload
     def __init__(self) -> None:
@@ -141,6 +141,11 @@ class KVCache:
     def layer_id(self) -> int:
         """
         kv cache layer id
+        """
+    @property
+    def seq_size_per_block(self) -> int:
+        """
+        Sequence size per block
         """
     @property
     def v_cache_base(self) -> torch.Tensor:
