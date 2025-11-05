@@ -117,13 +117,14 @@ class Qwen3NextGatedDeltaNetBase(torch.nn.Module):
     def _get_conv_states(self, kv_cache_tensor: torch.Tensor) -> torch.Tensor:
         conv_states = torch.as_strided(
             kv_cache_tensor,
-            (kv_cache_tensor.shape[0], self.head_v_dim - 1, self.qkv_size),
+            (kv_cache_tensor.shape[0], self.linear_conv_kernel_dim - 1, self.qkv_size),
             (kv_cache_tensor.stride()[0], self.qkv_size, 1),
             storage_offset=self.ssm_state_size,
         )
         return conv_states
 
     def _get_ssm_states(self, kv_cache_tensor: torch.Tensor) -> torch.Tensor:
+        # maybe should support smsm cahe with difference dtype(fp32/bf16/fp16)
         ssm_states = torch.as_strided(
             kv_cache_tensor,
             (
@@ -138,7 +139,7 @@ class Qwen3NextGatedDeltaNetBase(torch.nn.Module):
                 self.head_k_dim,
                 1,
             ),
-            storage_offset=self.ssm_state_size,
+            storage_offset=0,
         )
         return ssm_states
 
@@ -275,7 +276,7 @@ class Qwen3NextGatedDeltaNetDecode(Qwen3NextGatedDeltaNetBase):
         )
         out = causal_conv1d_update(
             mixed_qkv,
-            conv_states,
+            conv_states.transpose(1, 2),
             self.conv_weights,
             bias=None,
             activation="silu",
@@ -284,6 +285,7 @@ class Qwen3NextGatedDeltaNetDecode(Qwen3NextGatedDeltaNetBase):
             seq_size_per_block=seq_size_per_block,
             sequence_lengths=attn_inputs.sequence_lengths,
             num_accepted_tokens=None,
+            max_query_len=1,
             query_start_loc=decode_cu_seqlens,
         )
         return out
@@ -310,13 +312,20 @@ class Qwen3NextGatedDeltaNetDecode(Qwen3NextGatedDeltaNetBase):
         beta = b.sigmoid()
         g = fused_gdn_gating(self.alog, a, self.dt_bias)
 
-        g = g.view(1, self.local_num_v_heads, self.local_num_v_heads)
-        beta = beta.view(1, self.local_num_v_heads, self.local_num_v_heads)
-        query = query.view(1, seq_len, self.local_num_k_heads, self.head_k_dim)
-        key = key.view(1, seq_len, self.local_num_k_heads, self.head_k_dim)
+        g = g.view(1, seq_len, self.local_num_v_heads)
+        beta = beta.view(1, seq_len, self.local_num_v_heads)
+        query = query.view(
+            1, seq_len, self.local_num_k_heads, self.head_k_dim
+        ).repeat_interleave(self.num_key_value_heads, dim=2)
+        key = key.view(
+            1, seq_len, self.local_num_k_heads, self.head_k_dim
+        ).repeat_interleave(self.num_key_value_heads, dim=2)
         value = value.view(1, seq_len, self.local_num_v_heads, self.head_v_dim)
         ssm_states = self._get_ssm_states(kv_cache_tensor)
 
+        decode_cu_seqlens = torch.arange(
+            mixed_qkv.shape[0] + 1, device=mixed_qkv.device, dtype=torch.int32
+        )
         core_attn_out, _ = fused_recurrent_gated_delta_rule(
             q=query,
             k=key,
@@ -326,14 +335,14 @@ class Qwen3NextGatedDeltaNetDecode(Qwen3NextGatedDeltaNetBase):
             scale=None,
             initial_state=ssm_states,
             inplace_final_state=True,
-            cu_seqlens=attn_inputs.decode_cu_seqlens,
+            cu_seqlens=decode_cu_seqlens,
             block_map=attn_inputs.kv_cache_block_id_device,
             seq_size_per_block=seq_size_per_block,
             sequence_lengths=attn_inputs.sequence_lengths,
             num_accepted_tokens=None,
             use_qk_l2norm_in_kernel=True,
         )
-        return core_attn_out
+        return core_attn_out.squeeze(0)
 
     def forward(
         self,
@@ -558,7 +567,10 @@ class Qwen3NextModel(GptModelBase):
 
         attention_inputs: PyAttentionInputs = inputs.attention_inputs
         attention_inputs.prefix_lengths = attention_inputs.prefix_lengths.cuda()
-        attention_inputs.sequence_lengths = attention_inputs.sequence_lengths.cuda()
+        attention_inputs.sequence_lengths = (
+            attention_inputs.sequence_lengths + 1
+        ).cuda()
+        print("sequence_lengths", attention_inputs.sequence_lengths)
         fmha_impl = self.get_fmha_impl(attention_inputs)
         for i, decoder_layer in enumerate(self.layers):
             hidden_states = decoder_layer(

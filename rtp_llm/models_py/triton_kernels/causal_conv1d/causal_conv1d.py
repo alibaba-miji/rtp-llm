@@ -1152,7 +1152,7 @@ def causal_conv1d_update(
         stride_x_seq, stride_x_dim, stride_x_token = x.stride()
         stride_o_seq, stride_o_dim, stride_o_token = out.stride()
     else:
-        # X (dim, cu_seqlen)
+        # X (cu_seqlen, dim)
         stride_x_token, stride_x_dim = x.stride()
         stride_x_seq = 0
         stride_o_token, stride_o_dim = out.stride()

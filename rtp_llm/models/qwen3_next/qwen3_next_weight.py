@@ -29,7 +29,6 @@ from rtp_llm.utils.model_weight import (
 
 
 def split_0(ts: List[torch.Tensor], part: int):
-    print(f"split_0: ts: {ts}, part: {part}")
     dim0, dim1 = ts[0].shape
     if part == 0:
         return ts[0][: dim0 // 2, :]
