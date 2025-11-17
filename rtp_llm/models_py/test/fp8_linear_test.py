@@ -3,7 +3,7 @@ import unittest
 
 import torch
 
-from rtp_llm.models_py.modules.fp8_linear import Fp8DeepGEMMLinear
+from rtp_llm.models_py.modules.cuda.fp8_linear import Fp8DeepGEMMLinear
 
 
 class Fp8DeepGEMMLinearTest(unittest.TestCase):
@@ -14,7 +14,7 @@ class Fp8DeepGEMMLinearTest(unittest.TestCase):
         if self.device == "cpu":
             self.skipTest("FP8 tests require CUDA")
 
-        logging.getLogger("rtp_llm.models_py.modules.fp8_linear").setLevel(
+        logging.getLogger("rtp_llm.models_py.modules.cuda.fp8_linear").setLevel(
             logging.WARNING
         )
 

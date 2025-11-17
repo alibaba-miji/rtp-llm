@@ -1,8 +1,6 @@
-from typing import Tuple, Union
+from typing import Optional
 
 import torch
-from aiter import layernorm2d_fwd as layernorm2d_fwd
-from aiter import rmsnorm2d_fwd as rms_norm
 from torch import nn
 
 from rtp_llm.ops.compute_ops import rtp_llm_ops
@@ -12,10 +10,18 @@ class RMSNorm(torch.nn.Module):
     def __init__(self, weight: torch.Tensor, eps: float = 1e-6):
         super().__init__()
         self.weight = weight
-        self.variance_epsilon = eps
+        self.eps = eps
 
-    def forward(self, hidden_states: torch.Tensor):
-        return rms_norm(hidden_states, self.weight.data, self.variance_epsilon)
+    def forward(
+        self, hidden_states: torch.Tensor, output: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
+        stream_id = torch.cuda.current_stream().cuda_stream
+        if output is None:
+            output = torch.empty_like(hidden_states)
+        rtp_llm_ops.rmsnorm(
+            output, hidden_states, self.weight.data, self.variance_epsilon, stream_id
+        )
+        return output
 
 
 class AddBiasResLayerNorm(torch.nn.Module):
@@ -26,30 +32,17 @@ class AddBiasResLayerNorm(torch.nn.Module):
         self.variance_epsilon = eps
 
     def forward(
-        self,
-        hidden_states: torch.Tensor,
-        residual: torch.Tensor,
-        bias: torch.Tensor,
-    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
-        if hidden_states.shape[0] > 32 and hidden_states.shape[1] <= 768:
-            return layernorm2d_fwd(
-                hidden_states,
-                self.weight.data,
-                bias,
-                self.variance_epsilon,
-                x_bias=None,
-            )
-        else:
-            rtp_llm_ops.fused_add_layernorm(
-                hidden_states,
-                residual,
-                bias,
-                self.weight.data,
-                self.beta,
-                self.variance_epsilon,
-                0,
-            )
-            return hidden_states
+        self, hidden_states: torch.Tensor, residual: torch.Tensor, bias: torch.Tensor
+    ):
+        rtp_llm_ops.fused_add_layernorm(
+            hidden_states,
+            residual,
+            bias,
+            self.weight.data,
+            self.beta,
+            self.variance_epsilon,
+        )
+        return hidden_states
 
 
 class FusedQKRMSNorm(nn.Module):
@@ -72,7 +65,7 @@ class FusedQKRMSNorm(nn.Module):
         self.q_size = self.head_num * self.size_per_head
         self.kv_size = self.kv_head_num * self.size_per_head
 
-    def forward(self, hidden_states):
+    def forward(self, hidden_states: torch.Tensor):
         m, n = hidden_states.shape
         rtp_llm_ops.fused_qk_rmsnorm(
             hidden_states,

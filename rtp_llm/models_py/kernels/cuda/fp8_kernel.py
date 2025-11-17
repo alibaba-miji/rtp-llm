@@ -1,23 +1,11 @@
-import functools
-import json
 import logging
-import os
-from functools import lru_cache
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
 import torch
 
-import rtp_llm.models_py.modules.utils as utils
-
-if utils.is_cuda():
-    from rtp_llm.ops.compute_ops import (
-        per_tensor_quant_fp8,
-        per_token_group_quant_fp8,
-        per_token_group_quant_int8,
-        per_token_quant_fp8,
-    )
-else:
-    logging.warning("can't import from rtp_llm_ops, only support cuda!")
+import rtp_llm.models_py.utils.arch as arch
+import rtp_llm.ops.compute_ops as compute_ops
+from rtp_llm.models_py.utils.func import align
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +62,7 @@ def sgl_per_token_group_quant_fp8(
     scale_tma_aligned: bool = False,
     scale_ue8m0: bool = False,
 ):
+    assert arch.is_cuda(), "only support cuda"
     assert (
         x.shape[-1] % group_size == 0
     ), "the last dimension of `x` cannot be divisible by `group_size`"
@@ -94,9 +83,8 @@ def sgl_per_token_group_quant_fp8(
         scale_tma_aligned=scale_tma_aligned,
         scale_ue8m0=scale_ue8m0,
     )
-
     if x.shape[0] > 0:
-        per_token_group_quant_fp8(
+        compute_ops.per_token_group_quant_fp8(
             x, x_q, x_s, group_size, eps, fp8_min, fp8_max, scale_ue8m0
         )
 
@@ -109,7 +97,7 @@ def scaled_fp8_per_tensor_quant(
     output: Optional[torch.Tensor] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     assert input.ndim == 2
-
+    assert arch.is_cuda(), "only support cuda"
     shape: Union[Tuple[int, int], torch.Size] = input.shape
     out_dtype: torch.dtype = torch.float8_e4m3fn
 
@@ -121,11 +109,11 @@ def scaled_fp8_per_tensor_quant(
     if scale is None:
         # dynamic quant
         scale = torch.zeros(1, device=input.device, dtype=torch.float32)
-        per_tensor_quant_fp8(input, output, scale, False)
+        compute_ops.per_tensor_quant_fp8(input, output, scale, False)
     else:
         # static quant
         assert scale.numel() == 1, f"{scale.shape}"
-        per_tensor_quant_fp8(input, output, scale, True)
+        compute_ops.per_tensor_quant_fp8(input, output, scale, True)
 
     return output, scale
 
@@ -134,6 +122,7 @@ def scaled_fp8_per_token_quant(
     input: torch.Tensor,
     output: Optional[torch.Tensor] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
+    assert arch.is_cuda(), "only support cuda"
     scale = torch.zeros(input.size(0), device=input.device, dtype=torch.float32)
     if output is not None:
         assert output.dtype == torch.float8_e4m3fn
@@ -142,6 +131,6 @@ def scaled_fp8_per_token_quant(
             input.shape, device=input.device, dtype=torch.float8_e4m3fn
         )
 
-    per_token_quant_fp8(input, output, scale)
+    compute_ops.per_token_quant_fp8(input, output, scale)
     scale = scale.reshape(-1, 1)
     return output, scale

@@ -5,18 +5,14 @@ import torch
 from torch import nn
 
 from rtp_llm.config.quant_config import QuantizationConfig
-from rtp_llm.models_py.modules import utils
 
 logger = logging.getLogger(__name__)
 
-from rtp_llm.models_py.modules.fp8_kernel import (
+from rtp_llm.models_py.kernels.cuda.fp8_kernel import (
     scaled_fp8_per_tensor_quant,
     sgl_per_token_group_quant_fp8,
 )
-from rtp_llm.models_py.modules.quantization.deepgemm_wrapper import (
-    fp8_gemm_nt,
-    has_deep_gemm,
-)
+from rtp_llm.models_py.modules.cuda.deepgemm_wrapper import fp8_gemm_nt, has_deep_gemm
 
 
 class Fp8DeepGEMMLinear(nn.Module):

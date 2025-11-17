@@ -40,19 +40,14 @@ py_library(
 )
 
 py_library(
-    name = "modules_cuda",
+    name = "kernels",
     srcs = glob([
-        "modules/cuda/*.py",
-        "modules/cuda/**/*.py",
-    ])
-)
-
-py_library(
-    name = "modules_rocm",
-    srcs = glob([
-        "modules/rocm/*.py",
-        "modules/rocm/**/*.py",
-    ])
+        "kernels/*.py",
+        "kernels/**/*.py",
+    ]),
+    deps = [
+        ":utils",
+    ],
 )
 
 py_library(
@@ -64,14 +59,11 @@ py_library(
     deps = [
         ":utils",
         ":modules",
+        ":kernels",
         "//rtp_llm/model_loader:loader",
     ] + select({
         "@//:using_cuda12": [
-            ":modules_cuda",
             "@deep_gemm_ext//:deep_gemm"
-        ],
-        "@//:using_rocm": [
-            ":modules_rocm"
         ],
         "//conditions:default": [],
     }),

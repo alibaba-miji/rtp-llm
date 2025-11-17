@@ -1,8 +1,13 @@
 import aiter
 import torch
+
 from rtp_llm.distribute.collective import Group, all_reduce
-from rtp_llm.models_py.modules.mlp import FusedSiluActDenseMLP
-class FusedSiluActDenseMLP(FusedSiluActDenseMLP):
+from rtp_llm.models_py.modules.common.mlp import (
+    FusedSiluActDenseMLP as BaseFusedSiluActDenseMLP,
+)
+
+
+class FusedSiluActDenseMLP(BaseFusedSiluActDenseMLP):
     def forward(self, x: torch.Tensor):
         gate_up = self.gate_up_proj(x)
         d = gate_up.shape[-1] // 2

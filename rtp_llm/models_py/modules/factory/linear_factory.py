@@ -2,38 +2,34 @@
 Factory class for creating Linear layers with FP8 or regular precision.
 """
 
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 import torch
 from torch import nn
 
 from rtp_llm.config.gpt_init_model_parameters import GptInitModelParameters
-from rtp_llm.models_py.modules import Linear, utils
+from rtp_llm.models_py.modules import Linear
+from rtp_llm.models_py.utils.arch import is_cuda, is_hip
 
-if utils.is_hip():
+if is_hip():
     from rtp_llm.models_py.modules.rocm.fp8_linear import (
         Fp8DeepGEMMLinear,
         Fp8PTPCLinear,
     )
 
-    FP8_LINEAR_AVAILABLE = True
-    FP8_PTPC_AVAILABLE = True
+    Fp8PerTensorLinear = None
+elif is_cuda():
+    from rtp_llm.models_py.modules.cuda.fp8_linear import (
+        Fp8DeepGEMMLinear,
+        Fp8PerTensorLinear,
+    )
 
+    Fp8PTPCLinear = None
 
-elif utils.is_cuda():
-    from rtp_llm.models_py.modules.fp8_linear import Fp8PerTensorLinear
-
-    try:
-        from rtp_llm.models_py.modules.fp8_linear import Fp8DeepGEMMLinear
-
-        FP8_LINEAR_AVAILABLE = True
-    except ImportError:
-        Fp8DeepGEMMLinear = None
-        FP8_LINEAR_AVAILABLE = False
 else:
     Fp8DeepGEMMLinear = None
-    FP8_LINEAR_AVAILABLE = False
-    FP8_PTPC_AVAILABLE = False
+    Fp8PerTensorLinear = False
+    Fp8PTPCLinear = False
 
 
 class LinearFactory:
@@ -46,9 +42,6 @@ class LinearFactory:
         weight_key: str,
     ) -> bool:
         """Check if FP8 linear layer should be used."""
-        if not FP8_LINEAR_AVAILABLE:
-            return False
-
         if not hasattr(config, "quant_config") or config.quant_config is None:
             return False
 
@@ -83,41 +76,36 @@ class LinearFactory:
         force_fp8: bool = False,
     ) -> nn.Module:
         """Create Linear layer (FP8 or regular)."""
-        if force_fp8 or (
-            weight_scales is not None
-            and (
-                weight.dtype == torch.float8_e4m3fn
-                or weight.dtype == torch.float8_e4m3fnuz
+        if not force_fp8:
+            if weight_scales is None or weight.dtype not in [
+                torch.float8_e4m3fn,
+                torch.float8_e4m3fnuz,
+            ]:
+                return Linear(weight, bias)
+        if weight_scales is None:
+            raise ValueError("FP8 linear layer requires weight_scales")
+        if config is None:
+            raise ValueError("FP8 linear layer requires config")
+        quant_config = config.quant_config
+        assert quant_config is not None, "quant_config is required"
+        if quant_config.get_method() in [
+            "FP8_PER_TENSOR_COMPRESSED",
+            "FP8_DYNAMIC_PER_TENSOR",
+        ]:
+            assert Fp8PerTensorLinear is not None, "Fp8PerTensorLinear is not available"
+            return Fp8PerTensorLinear(
+                config.quant_config, weight, weight_scales, input_scales, bias
             )
-        ):
-            if weight_scales is None:
-                raise ValueError("FP8 linear layer requires weight_scales")
-            if config is None:
-                raise ValueError("FP8 linear layer requires config")
-            else:
-                quant_config = config.quant_config
-                if quant_config.get_method() in [
-                    "FP8_PER_TENSOR_COMPRESSED",
-                    "FP8_DYNAMIC_PER_TENSOR",
-                ]:
-                    return Fp8PerTensorLinear(
-                        config.quant_config, weight, weight_scales, input_scales, bias
-                    )
-                else:
-                    if not FP8_LINEAR_AVAILABLE:
-                        raise RuntimeError(
-                            "FP8 DeepGEMMLinear layer requested but not available"
-                        )
-
-                    if (
-                        quant_config
-                        and quant_config.get_method() == "FP8_PER_CHANNEL_COMPRESSED"
-                    ):
-                        return Fp8PTPCLinear(weight, weight_scales, bias, config)
-                    else:
-                        return Fp8DeepGEMMLinear(weight, weight_scales, bias, config)
+        elif quant_config.get_method() == "FP8_PER_CHANNEL_COMPRESSED":
+            assert Fp8PTPCLinear is not None, "Fp8PTPCLinear is not available"
+            return Fp8PTPCLinear(weight, weight_scales, bias, config)
+        elif quant_config.get_method() == "FP8_PER_BLOCK":
+            assert Fp8DeepGEMMLinear is not None, "Fp8DeepGEMMLinear is not available"
+            return Fp8DeepGEMMLinear(weight, weight_scales, bias, config)
         else:
-            return Linear(weight, bias)
+            raise ValueError(
+                f"Unsupported quantization method: {quant_config.get_method()}"
+            )
 
     @staticmethod
     def create_linear_from_weights(
@@ -130,9 +118,10 @@ class LinearFactory:
         """Create Linear layer from weight dictionary."""
         weight = weights[weight_key]
         weight_scales = weights.get(scale_key) if scale_key else None
-        bias = weights.get(bias_key)
+        bias = weights.get(bias_key) if bias_key else None
 
         # Auto-detect FP8 usage
+        assert config is not None, "config is required"
         use_fp8 = LinearFactory.should_use_fp8_linear(config, weights, weight_key)
 
         return LinearFactory.create_linear(
@@ -146,14 +135,15 @@ class LinearFactory:
     @staticmethod
     def create_merged_linear(
         weights: Dict[str, torch.Tensor],
-        weight_keys: list,
-        scale_keys: Optional[list] = None,
-        bias_keys: Optional[list] = None,
+        weight_keys: List[str],
+        scale_keys: Optional[List[str]] = None,
+        bias_keys: Optional[List[str]] = None,
         config: Optional[GptInitModelParameters] = None,
         dim: int = -1,
     ) -> nn.Module:
         """Create merged Linear layer (e.g., gate_up_proj)."""
         # Check FP8 usage based on first weight
+        assert config is not None, "config is required"
         use_fp8 = LinearFactory.should_use_fp8_linear(config, weights, weight_keys[0])
 
         # Merge weights

@@ -7,8 +7,6 @@ from typing import Any, Dict, List, Optional
 import pkg_resources
 import torch
 
-import rtp_llm.models_py.modules.utils as utils
-
 g_workspace_buffer = None
 
 
@@ -80,12 +78,10 @@ def warmup_flashinfer_python():
 
 
 # import flashinfer
-import torch
-import torch.nn as nn
 import torch.nn.functional as F
 
 from rtp_llm.config.gpt_init_model_parameters import GptInitModelParameters
-from rtp_llm.models_py.modules.linear_factory import LinearFactory
+from rtp_llm.models_py.modules.factory.linear_factory import LinearFactory
 
 # from rtp_llm.config.gpt_init_model_parameters import GptInitModelParameters
 from rtp_llm.ops.compute_ops import KVCache, PyAttentionInputs, rtp_llm_ops

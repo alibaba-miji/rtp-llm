@@ -111,7 +111,7 @@ class TestCudaFp8PerBlockNoDPStrategy(unittest.TestCase):
     @patch(
         "rtp_llm.models_py.modules.factory.fused_moe.config_resolver.MoeConfigResolver"
     )
-    @patch("rtp_llm.models_py.modules.quantization.deepgemm_wrapper.has_deep_gemm")
+    @patch("rtp_llm.models_py.modules.cuda.deepgemm_wrapper.has_deep_gemm")
     def test_can_handle_single_gpu(
         self, mock_has_deep_gemm: Any, mock_resolver_class: Any
     ) -> None:
@@ -131,7 +131,7 @@ class TestCudaFp8PerBlockNoDPStrategy(unittest.TestCase):
     @patch(
         "rtp_llm.models_py.modules.factory.fused_moe.config_resolver.MoeConfigResolver"
     )
-    @patch("rtp_llm.models_py.modules.quantization.deepgemm_wrapper.has_deep_gemm")
+    @patch("rtp_llm.models_py.modules.cuda.deepgemm_wrapper.has_deep_gemm")
     def test_can_handle_tp_equal_ep(
         self, mock_has_deep_gemm: Any, mock_resolver_class: Any
     ) -> None:
@@ -151,7 +151,7 @@ class TestCudaFp8PerBlockNoDPStrategy(unittest.TestCase):
     @patch(
         "rtp_llm.models_py.modules.factory.fused_moe.config_resolver.MoeConfigResolver"
     )
-    @patch("rtp_llm.models_py.modules.quantization.deepgemm_wrapper.has_deep_gemm")
+    @patch("rtp_llm.models_py.modules.cuda.deepgemm_wrapper.has_deep_gemm")
     def test_can_handle_false_no_deep_gemm(
         self, mock_has_deep_gemm: Any, mock_resolver_class: Any
     ) -> None:

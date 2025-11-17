@@ -4,7 +4,8 @@ from unittest import SkipTest, TestCase, main
 import torch
 from torch import dtype as _dtype
 
-from rtp_llm.models_py.modules import Linear, LinearTorch
+from rtp_llm.models_py.modules import Linear
+from rtp_llm.models_py.test.touch_ref_module import LinearTorch
 
 
 class LinearTest(TestCase):

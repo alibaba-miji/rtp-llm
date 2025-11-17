@@ -7,11 +7,11 @@ from rtp_llm.config.gpt_init_model_parameters import GptInitModelParameters
 from rtp_llm.model_loader.model_weight_info import ModelWeights
 from rtp_llm.models_py.model_desc.module_base import GptModelBase
 from rtp_llm.models_py.modules import RMSNorm
-from rtp_llm.models_py.modules.attention import CausalAttention
-from rtp_llm.models_py.modules.embedding import EmbeddingBert
-from rtp_llm.models_py.modules.fmha import FMHAImplBase
-from rtp_llm.models_py.modules.mlp import BertGeluActDenseMLP
-from rtp_llm.models_py.modules.norm import LayerNorm
+from rtp_llm.models_py.modules.common.attention import CausalAttention
+from rtp_llm.models_py.modules.common.base.norm import LayerNorm
+from rtp_llm.models_py.modules.common.embedding import EmbeddingBert
+from rtp_llm.models_py.modules.common.fmha import FMHAImplBase
+from rtp_llm.models_py.modules.common.mlp import BertGeluActDenseMLP
 from rtp_llm.ops.compute_ops import (
     KVCache,
     PyAttentionInputs,
