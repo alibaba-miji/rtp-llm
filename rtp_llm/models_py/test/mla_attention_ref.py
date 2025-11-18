@@ -12,7 +12,7 @@ from rtp_llm.utils.model_weight import W
 
 class RMSNormTorch(torch.nn.Module):
     def __init__(self, weight: torch.Tensor, eps: float = 1e-6):
-        super().__init__(weight, eps)
+        super().__init__()
         self.weight = weight
         self.variance_epsilon = eps
 

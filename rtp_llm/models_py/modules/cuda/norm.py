@@ -19,7 +19,7 @@ class RMSNorm(torch.nn.Module):
         if output is None:
             output = torch.empty_like(hidden_states)
         rtp_llm_ops.rmsnorm(
-            output, hidden_states, self.weight.data, self.variance_epsilon, stream_id
+            output, hidden_states, self.weight.data, self.eps, stream_id
         )
         return output
 
@@ -77,5 +77,19 @@ class FusedQKRMSNorm(nn.Module):
             m,
             n,
             self.size_per_head,
+        )
+        return hidden_states
+
+
+class RMSResNorm(torch.nn.Module):
+    def __init__(self, weight: torch.Tensor, eps: float = 1e-6):
+        super().__init__()
+        self.weight = weight
+        self.variance_epsilon = eps
+
+    def forward(self, hidden_states: torch.Tensor, residual: torch.Tensor):
+        stream_id = torch.cuda.current_stream().cuda_stream
+        rtp_llm_ops.fused_add_rmsnorm(
+            hidden_states, residual, self.weight.data, self.variance_epsilon, stream_id
         )
         return hidden_states

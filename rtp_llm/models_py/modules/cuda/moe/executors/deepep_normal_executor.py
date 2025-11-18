@@ -17,13 +17,13 @@ from rtp_llm.models_py.modules.cuda.deepgemm_wrapper import (
 )
 from rtp_llm.models_py.modules.factory.fused_moe.quant_config import FusedMoEQuantConfig
 from rtp_llm.models_py.modules.factory.fused_moe.type import ExecutorType
-from rtp_llm.models_py.modules.utils import ceil_div, dispose_tensor
 from rtp_llm.models_py.triton_kernels.common.activation import silu_and_mul
 from rtp_llm.models_py.triton_kernels.moe.ep_kernels import (
     ep_gather,
     ep_scatter,
     tma_align_input_scale,
 )
+from rtp_llm.models_py.utils.func import ceil_div, dispose_tensor
 from rtp_llm.ops.compute_ops import trt_fp8_quantize_128
 from rtp_llm.utils.model_weight import W
 

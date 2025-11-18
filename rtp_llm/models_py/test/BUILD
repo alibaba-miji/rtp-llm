@@ -3,8 +3,17 @@ test_envs = {
     "DEVICE_RESERVE_MEMORY_BYTES": "512000000",  # 512MB
 }
 
+py_library(
+    name = "torch_ref_module",
+    srcs = ["torch_ref_module.py"],
+    deps = [
+        "//rtp_llm:torch",
+    ],
+)
+
 py_test_deps = [
     "//rtp_llm/models_py/standalone:py_standalone_testlib",
+    ":torch_ref_module",
 ]
 
 py_test (
@@ -263,7 +272,7 @@ py_test (
 
 py_test (
     name = "mla_attention_test",
-    srcs = ["mla_attention_test.py"],
+    srcs = ["mla_attention_test.py", "mla_attention_ref.py"],
     deps = py_test_deps + [
         "//rtp_llm:testlib",
     ],
@@ -274,7 +283,7 @@ py_test (
 
 py_test (
     name = "mla_reuse_cache_test",
-    srcs = ["mla_reuse_cache_test.py"],
+    srcs = ["mla_reuse_cache_test.py", "mla_attention_ref.py"],
     deps = py_test_deps + [
         "//rtp_llm:testlib",
     ],

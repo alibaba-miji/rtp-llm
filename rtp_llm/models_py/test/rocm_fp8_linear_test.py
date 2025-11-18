@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from aiter import dtypes
 
-from rtp_llm.models_py.modules.utils import is_hip
+from rtp_llm.models_py.utils.arch import is_hip
 
 try:
     import aiter

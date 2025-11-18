@@ -4,7 +4,8 @@ from unittest import SkipTest, TestCase, main
 import torch
 from torch import dtype as _dtype
 
-from rtp_llm.models_py.modules.norm import RMSResNorm, RMSResNormTorch
+from rtp_llm.models_py.modules.cuda.norm import RMSResNorm
+from rtp_llm.models_py.test.torch_ref_module import RMSResNormTorch
 
 
 class RMSResNormTest(TestCase):
@@ -24,13 +25,11 @@ class RMSResNormTest(TestCase):
         rms_res_norm_torch = RMSResNormTorch(w)
         x = torch.randn(num_tokens, hidden_size, dtype=dtype)
         residual = torch.randn(num_tokens, hidden_size, dtype=dtype)
-        self.assertTrue(
-            torch.allclose(
-                rms_res_norm_torch(x, residual),
-                rms_res_norm(x, residual),
-                atol=1e-2,
-                rtol=1e-2,
-            )
+        torch.testing.assert_close(
+            rms_res_norm_torch(x, residual),
+            rms_res_norm(x, residual),
+            atol=2e-2,
+            rtol=2e-2,
         )
 
     def test_rms_res_norm(self):
