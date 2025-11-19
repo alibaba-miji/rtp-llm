@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -79,3 +79,41 @@ class RMSResNormTorch(RMSNormTorch):
     def forward(self, hidden_states: torch.Tensor, residual: torch.Tensor):
         hidden_states = hidden_states + residual
         return super().forward(hidden_states)
+
+
+class QKRMSNorm(torch.nn.Module):
+    def __init__(
+        self,
+        q_weight: torch.Tensor,
+        k_weight: torch.Tensor,
+        head_num: int,
+        kv_head_num: int,
+        size_per_head: int = 128,
+        eps: float = 1e-6,
+    ):
+        super().__init__()
+        self.q_norm = RMSNormTorch(q_weight, eps)
+        self.k_norm = RMSNormTorch(k_weight, eps)
+        self.head_num = head_num
+        self.kv_head_num = kv_head_num
+        self.size_per_head = size_per_head
+        self.q_size = self.head_num * self.size_per_head
+        self.kv_size = self.kv_head_num * self.size_per_head
+        self.variance_epsilon = eps
+
+    def _apply_qk_norm(
+        self, q: torch.Tensor, k: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        q_by_head = q.reshape(-1, self.size_per_head)
+        q_by_head = self.q_norm(q_by_head)
+        q = q_by_head.view(q.shape)
+        k_by_head = k.reshape(-1, self.size_per_head)
+        k_by_head = self.k_norm(k_by_head)
+        k = k_by_head.view(k.shape)
+        return q, k
+
+    def forward(self, hidden_states):
+        q, k, v = hidden_states.split([self.q_size, self.kv_size, self.kv_size], dim=-1)
+        q, k = self._apply_qk_norm(q, k)
+        output = torch.cat([q, k, v], dim=-1)
+        return output

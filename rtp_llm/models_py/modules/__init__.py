@@ -33,6 +33,7 @@ else:
 
 from rtp_llm.models_py.modules.common.embedding import Embedding
 from rtp_llm.models_py.modules.common.kvcache_store import WriteCacheStoreOp
+from rtp_llm.models_py.modules.common.base.norm import LayerNorm
 
 __all__ = [
     "Linear",
@@ -43,4 +44,5 @@ __all__ = [
     "SelectTopk",
     "Embedding",
     "WriteCacheStoreOp",
+    "LayerNorm",
 ]

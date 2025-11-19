@@ -4,7 +4,8 @@ from unittest import SkipTest, TestCase, main
 import torch
 from torch import dtype as _dtype
 
-from rtp_llm.models_py.modules.rocm.norm import LayerNorm, LayerNormTorch
+from rtp_llm.models_py.modules import LayerNorm
+from rtp_llm.models_py.test.torch_ref_module import LayerNormTorch
 
 
 class LayerNormTest(TestCase):

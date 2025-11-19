@@ -4,7 +4,8 @@ from unittest import SkipTest, TestCase, main
 import torch
 from torch import dtype as _dtype
 
-from rtp_llm.models_py.modules.rocm.norm import FusedQKRMSNorm, QKRMSNorm
+from rtp_llm.models_py.modules import FusedQKRMSNorm
+from rtp_llm.models_py.test.torch_ref_module import QKRMSNorm
 
 
 class FusedQKRMSNormTest(TestCase):
