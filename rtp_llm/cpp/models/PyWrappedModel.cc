@@ -94,6 +94,14 @@ torch_ext::PyAttentionInputs PyWrappedModel::buildPyAttentionInputs(const GptMod
         py_attn_inputs.decode_cu_seqlens_host = decode_cu_seqlens;
         py_attn_inputs.decode_cu_seqlens_d    = tensorHoldHostAndToCuda(decode_cu_seqlens);
     }
+    // for speculative
+    py_attn_inputs.is_target_verify = inputs.is_target_verify;
+    if (py_attn_inputs.is_target_verify) {
+        RTP_LLM_CHECK_WITH_INFO(context_batch_size > 0 && py_attn_inputs.total_tokens % context_batch_size == 0,
+                                "bs = 0 or total_tokens:%d is not divisible by context_batch_size:%d",
+                                py_attn_inputs.total_tokens,
+                                context_batch_size);
+    }
 
     // create device tensors
     py_attn_inputs.prefix_lengths_d          = tensorHoldHostAndToCuda(py_attn_inputs.prefix_lengths);
