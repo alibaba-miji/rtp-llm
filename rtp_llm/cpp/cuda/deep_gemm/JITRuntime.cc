@@ -80,8 +80,11 @@ vector<uint32_t> KernelParams::getKey() const {
 }
 
 string KernelParams::getCommandStr(const string& hdrs_path) const {
+    const string cutlass_include = "/cpp/cuda/deep_gemm/cutlass_hdr/cutlass/include";
+    // also bazel-bin path for dev env get cutlass_hdr
     return " -std=c++17 -shared -O3 --expt-relaxed-constexpr --expt-extended-lambda -gencode=arch=compute_90a,code=sm_90a --compiler-options=-fPIC,-O3,-Wno-deprecated-declarations,-Wno-abi -diag-suppress 177 -DENABLE_FP8 -I"
-           + hdrs_path + "/../ -I" + hdrs_path + "/cpp/cuda/deep_gemm/cutlass_hdr/cutlass/include";
+           + hdrs_path + "/../ -I" + hdrs_path + cutlass_include + " -I" + hdrs_path + "/../bazel-bin/rtp_llm"
+           + cutlass_include;
 }
 
 #ifdef ENABLE_FP8
