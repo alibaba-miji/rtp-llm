@@ -16,9 +16,10 @@ Usage example:
     moe = FusedMoeFactory.create_fused_moe(config, weights)
 """
 
-from rtp_llm.ops.compute_ops import DeviceType, get_device
-from rtp_llm.models_py.utils.arch import is_cuda, get_sm
 import torch
+
+from rtp_llm.models_py.utils.arch import get_sm, is_cuda
+from rtp_llm.ops.compute_ops import DeviceType, get_device
 
 from .defs.fused_moe import FusedMoe
 from .factory import FusedMoeFactory
@@ -59,7 +60,6 @@ else:
     from rtp_llm.models_py.modules.factory.fused_moe.impl.cuda.strategy import (
         CudaFp8PerBlockEpLowLatencyStrategy,
         CudaFp8PerBlockEpNormalStrategy,
-        CudaFp8PerBlockNoDPMaskedStrategy,
         CudaFp8PerBlockNoDPStrategy,
         CudaFp8PerTensorEpLowLatencyStrategy,
         CudaFp8PerTensorEpNormalStrategy,
@@ -67,7 +67,6 @@ else:
         CudaNoQuantCppStrategy,
         CudaNoQuantDpNormalStrategy,
         CudaNoQuantEpLowLatencyStrategy,
-
     )
 
     registry = StrategyRegistry()
@@ -75,7 +74,6 @@ else:
     registry.register(CudaFp8PerTensorEpNormalStrategy())
     registry.register(CudaFp8PerBlockEpLowLatencyStrategy())
     registry.register(CudaFp8PerBlockEpNormalStrategy())
-    registry.register(CudaFp8PerBlockNoDPMaskedStrategy())
     registry.register(CudaFp8PerBlockNoDPStrategy())
     registry.register(CudaFp8PerTensorNoDPStrategy())
     registry.register(CudaNoQuantEpLowLatencyStrategy())
@@ -87,8 +85,9 @@ else:
         from rtp_llm.models_py.modules.factory.fused_moe.impl.cuda.strategy import (
             CudaFp4EpLowLatencyStrategy,
             CudaFp4EpNormalStrategy,
-            CudaFp4NoDPStrategy
+            CudaFp4NoDPStrategy,
         )
+
         registry.register(CudaFp4EpLowLatencyStrategy())
         registry.register(CudaFp4EpNormalStrategy())
         registry.register(CudaFp4NoDPStrategy())

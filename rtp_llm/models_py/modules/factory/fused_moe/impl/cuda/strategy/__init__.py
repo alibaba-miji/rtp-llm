@@ -1,9 +1,13 @@
 """CUDA MOE strategies"""
 
+from .fp4 import (
+    CudaFp4EpLowLatencyStrategy,
+    CudaFp4EpNormalStrategy,
+    CudaFp4NoDPStrategy,
+)
 from .fp8_per_block import (
     CudaFp8PerBlockEpLowLatencyStrategy,
     CudaFp8PerBlockEpNormalStrategy,
-    CudaFp8PerBlockNoDPMaskedStrategy,
     CudaFp8PerBlockNoDPStrategy,
 )
 from .fp8_per_tensor import (
@@ -16,10 +20,6 @@ from .no_quant import (
     CudaNoQuantDpNormalStrategy,
     CudaNoQuantEpLowLatencyStrategy,
 )
-from .fp4 import (CudaFp4EpLowLatencyStrategy,
-                  CudaFp4EpNormalStrategy,
-                  CudaFp4NoDPStrategy)
-
 
 __all__ = [
     # No quantization
@@ -27,7 +27,6 @@ __all__ = [
     "CudaNoQuantCppStrategy",
     "CudaNoQuantDpNormalStrategy",
     # FP8 PerBlock
-    "CudaFp8PerBlockNoDPMaskedStrategy",
     "CudaFp8PerBlockNoDPStrategy",
     "CudaFp8PerBlockEpLowLatencyStrategy",
     "CudaFp8PerBlockEpNormalStrategy",
@@ -37,5 +36,5 @@ __all__ = [
     "CudaFp8PerTensorEpNormalStrategy",
     "CudaFp4EpLowLatencyStrategy",
     "CudaFp4EpNormalStrategy",
-    "CudaFp4NoDPStrategy"
+    "CudaFp4NoDPStrategy",
 ]

@@ -22,7 +22,6 @@ from rtp_llm.models_py.modules.factory.fused_moe.impl.common.strategy.batched_tr
 from rtp_llm.models_py.modules.factory.fused_moe.impl.cuda.strategy import (
     CudaFp8PerBlockEpNormalStrategy,
     CudaFp8PerBlockNoDPStrategy,
-    CudaFp8PerBlockNoDPMaskedStrategy,
     CudaFp8PerTensorNoDPStrategy,
 )
 from rtp_llm.ops import MoeConfig, ParallelismConfig
@@ -37,7 +36,9 @@ def create_model_config_without_quant() -> ModelConfig:
     return model_config
 
 
-def create_model_config_with_fp8_block_quant(dtype: Optional[str] = None) -> ModelConfig:
+def create_model_config_with_fp8_block_quant(
+    dtype: Optional[str] = None,
+) -> ModelConfig:
     """Create ModelConfig with FP8 block-wise quantization"""
     model_config = ModelConfig()
     model_config.quant_config = Fp8BlockWiseQuantConfig()
@@ -71,7 +72,9 @@ def create_parallelism_config(
 
 
 def create_moe_config(
-    use_deepep_low_latency: bool = False, use_all_gather: Optional[bool] = None, moe_strategy: Optional[str] = None,
+    use_deepep_low_latency: bool = False,
+    use_all_gather: Optional[bool] = None,
+    moe_strategy: Optional[str] = None,
 ) -> MoeConfig:
     """Create MoeConfig with specified settings
 
@@ -213,59 +216,30 @@ class TestCudaFp8PerBlockNoDPStrategy(unittest.TestCase):
         config.enable_cuda_graph = True
         self.assertFalse(strategy.can_handle(config))
 
+    @patch("rtp_llm.models_py.kernels.cuda.deepgemm_wrapper.has_deep_gemm")
+    def test_can_handle_masked_strategy_name(self, mock_has_deep_gemm: Any) -> None:
+        """Test that fp8_per_block_no_dp_masked strategy name is also accepted"""
+        mock_has_deep_gemm.return_value = True
+
+        config = create_moe_config_adapter(
+            model_config=create_model_config_with_fp8_block_quant(),
+            parallelism_config=create_parallelism_config(
+                ep_size=1, tp_size=1, dp_size=1
+            ),
+            moe_config=create_moe_config(
+                use_all_gather=True, moe_strategy="fp8_per_block_no_dp_masked"
+            ),
+            enable_cuda_graph=False,
+        )
+
+        strategy = CudaFp8PerBlockNoDPStrategy()
+        self.assertTrue(strategy.can_handle(config))
+
     def test_priority(self) -> None:
         """Test priority"""
         strategy = CudaFp8PerBlockNoDPStrategy()
         router_type = RouterType.PURE_TP
         executor_type = ExecutorType.DEEPGEMM_CONTINUOUS
-        expected_priority = router_type.value * 10 + executor_type.value
-
-        attributes = strategy.get_attributes()
-        self.assertEqual(attributes.router_class.router_type(), router_type)
-        self.assertEqual(attributes.executor_class.executor_type(), executor_type)
-        self.assertEqual(strategy.priority, expected_priority)
-
-
-class TestCudaFp8PerBlockNoDPMaskedStrategy(unittest.TestCase):
-    """Test CUDA FP8 PerBlock No DP Masked strategy"""
-
-    @patch("rtp_llm.models_py.kernels.cuda.deepgemm_wrapper.has_deep_gemm")
-    def test_can_handle_single_gpu(self, mock_has_deep_gemm: Any) -> None:
-        """Test single GPU case"""
-        mock_has_deep_gemm.return_value = True
-
-        config = create_moe_config_adapter(
-            model_config=create_model_config_with_fp8_block_quant("bf16"),
-            parallelism_config=create_parallelism_config(
-                ep_size=1, tp_size=1, dp_size=1
-            ),
-            moe_config=create_moe_config(use_all_gather=True, moe_strategy="fp8_per_block_no_dp_masked"),
-        )
-
-        strategy = CudaFp8PerBlockNoDPMaskedStrategy()
-        self.assertTrue(strategy.can_handle(config))
-
-    @patch("rtp_llm.models_py.kernels.cuda.deepgemm_wrapper.has_deep_gemm")
-    def test_can_handle_tp_equal_ep(self, mock_has_deep_gemm: Any) -> None:
-        """Test TP equals EP case"""
-        mock_has_deep_gemm.return_value = True
-
-        config = create_moe_config_adapter(
-            model_config=create_model_config_with_fp8_block_quant("bf16"),
-            parallelism_config=create_parallelism_config(
-                ep_size=2, tp_size=2, dp_size=1
-            ),
-            moe_config=create_moe_config(use_all_gather=True, moe_strategy="fp8_per_block_no_dp_masked"),
-        )
-
-        strategy = CudaFp8PerBlockNoDPMaskedStrategy()
-        self.assertTrue(strategy.can_handle(config))
-
-    def test_priority(self) -> None:
-        """Test priority"""
-        strategy = CudaFp8PerBlockNoDPMaskedStrategy()
-        router_type = RouterType.PURE_TP
-        executor_type = ExecutorType.DEEPGEMM_MASKED
         expected_priority = router_type.value * 10 + executor_type.value
 
         attributes = strategy.get_attributes()
