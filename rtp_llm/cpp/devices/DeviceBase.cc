@@ -245,10 +245,10 @@ void DeviceBase::writeCacheStore(const CacheStoreInputs& cache_store_inputs,
                                     index,
                                     max_blocks_per_batch);
             auto block_id = *(offset_addr + (param.decoder_batch_size + batch_id) * max_blocks_per_batch + index);
-            std::string cache_key;
 
-            cache_key =
-                makeCacheKey(param.model_id, param.cache_keys[batch_id * max_blocks_per_batch + index], param.layer_id);
+            auto cache_key = makeCacheKey(param.model_id,
+                                          param.cache_keys->data<int64_t>()[batch_id * max_blocks_per_batch + index],
+                                          param.layer_id);
 
             void*                 kv_addr = (void*)((int8_t*)kv_cache_data + block_id * param.kv_block_stride_bytes);
             std::shared_ptr<void> kv_block_addr(kv_addr, [](void* p) {});

@@ -291,10 +291,6 @@ rtp_llm::AttentionCommonInputs GptModel::prepareAttentionInputs(const GptModelIn
     if (!inputs.warmup && inputs.pd_separation) {
         RTP_LLM_CHECK_WITH_INFO(inputs.input_lengths && inputs.prefix_lengths && inputs.kv_cache_block_id,
                                 "failed to get information for pd seperation store cache");
-        vector<int64_t> cache_keys_vec;
-        if (inputs.cache_keys) {
-            cache_keys_vec = rtp_llm::buffer2vector<int64_t>(*inputs.cache_keys);
-        }
         CacheStoreInputs cache_store_inputs;
         cache_store_inputs.input_lengths_host           = inputs.input_lengths;
         cache_store_inputs.prefix_lengths_host          = inputs.prefix_lengths;
@@ -305,7 +301,7 @@ rtp_llm::AttentionCommonInputs GptModel::prepareAttentionInputs(const GptModelIn
         cache_store_inputs.decoder_batch_size           = attention_inputs.decoder_batch_size;
         cache_store_inputs.request_id                   = inputs.request_id;
         cache_store_inputs.request_pd_separation        = inputs.request_pd_separation;
-        cache_store_inputs.cache_keys                   = transVectorToString(cache_keys_vec);
+        cache_store_inputs.cache_keys                   = inputs.cache_keys;
         cache_store_inputs.tokens_per_block             = inputs.seq_size_per_block;
         cache_store_inputs.kv_block_stride_bytes        = inputs.kv_block_stride_bytes;
         cache_store_inputs.kv_scale_stride_bytes        = inputs.kv_scale_stride_bytes;
@@ -313,7 +309,7 @@ rtp_llm::AttentionCommonInputs GptModel::prepareAttentionInputs(const GptModelIn
         cache_store_inputs.model_id                     = model_id_;
         cache_store_inputs.decode_entrance              = inputs.decode_entrance;
         cache_store_inputs.warmup                       = inputs.warmup;
-        attention_inputs.cache_store_inputs             = cache_store_inputs;
+        attention_inputs.cache_store_inputs             = std::move(cache_store_inputs);
     }
 
     if (context_batch_size && prep_output.need_mask) {

@@ -12,4 +12,8 @@ inline std::string makeCacheKey(size_t model_id, const std::string& token_id_str
            + std::to_string(layer_id);
 }
 
+inline std::string makeCacheKey(size_t model_id, int64_t token_id, size_t layer_id) {
+    return makeCacheKey(model_id, std::to_string(token_id), layer_id);
+}
+
 }  // namespace rtp_llm

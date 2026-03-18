@@ -42,21 +42,21 @@ struct PyModelInitResources {
 };
 
 struct PyCacheStoreInputs {
-    size_t                   context_batch_size = 0;
-    size_t                   decoder_batch_size = 0;
-    torch::Tensor            request_id;
-    torch::Tensor            request_pd_separation;
-    torch::Tensor            kv_cache_layer_to_group;
-    torch::Tensor            kv_cache_group_types;
-    std::vector<std::string> cache_keys;  // [context_batch_size]
-    size_t                   tokens_per_block;
-    size_t                   kv_block_stride_bytes;
-    size_t                   kv_scale_stride_bytes;
-    bool                     pd_separation   = false;
-    size_t                   model_id        = 0;
-    bool                     decode_entrance = false;
-    bool                     warmup          = false;
-    bool                     mla_kvcache     = false;
+    size_t        context_batch_size = 0;
+    size_t        decoder_batch_size = 0;
+    torch::Tensor request_id;
+    torch::Tensor request_pd_separation;
+    torch::Tensor kv_cache_layer_to_group;
+    torch::Tensor kv_cache_group_types;
+    torch::Tensor cache_keys;  // int64, [context_batch_size, max_blocks_per_batch]
+    size_t        tokens_per_block;
+    size_t        kv_block_stride_bytes;
+    size_t        kv_scale_stride_bytes;
+    bool          pd_separation   = false;
+    size_t        model_id        = 0;
+    bool          decode_entrance = false;
+    bool          warmup          = false;
+    bool          mla_kvcache     = false;
 };
 
 // for cuda grpah capture

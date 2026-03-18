@@ -211,12 +211,10 @@ GptModelOutputs PyWrappedModel::callForwardPostLayers(BufferPtr             hidd
 std::optional<PyCacheStoreInputs> PyWrappedModel::prepareWriteCacheParams(const GptModelInputs& inputs) {
     std::optional<PyCacheStoreInputs> params;
     if (!inputs.warmup && inputs.pd_separation) {
-        const auto           decoder_batch_size = inputs.sequence_lengths->shape()[0];
-        const auto           context_batch_size = inputs.input_lengths->shape()[0] - decoder_batch_size;
-        std::vector<int64_t> cache_keys_vec;
-        if (inputs.cache_keys) {
-            cache_keys_vec = rtp_llm::buffer2vector<int64_t>(*inputs.cache_keys);
-        }
+        const auto    decoder_batch_size = inputs.sequence_lengths->shape()[0];
+        const auto    context_batch_size = inputs.input_lengths->shape()[0] - decoder_batch_size;
+        torch::Tensor cache_keys_tensor =
+            inputs.cache_keys ? Buffer2torchTensor(inputs.cache_keys, false) : torch::Tensor();
         torch::Tensor kv_cache_layer_to_group = inputs.kv_cache_layer_to_group ?
                                                     Buffer2torchTensor(inputs.kv_cache_layer_to_group, false) :
                                                     torch::Tensor();
@@ -228,7 +226,7 @@ std::optional<PyCacheStoreInputs> PyWrappedModel::prepareWriteCacheParams(const 
                                               Buffer2torchTensor(inputs.request_pd_separation, false),
                                               kv_cache_layer_to_group,
                                               kv_cache_group_types,
-                                              transVectorToString(cache_keys_vec),
+                                              cache_keys_tensor,
                                               inputs.seq_size_per_block,
                                               inputs.kv_block_stride_bytes,
                                               inputs.kv_scale_stride_bytes,
@@ -238,7 +236,7 @@ std::optional<PyCacheStoreInputs> PyWrappedModel::prepareWriteCacheParams(const 
                                               inputs.warmup,
                                               description_.attention_conf.use_mla
                                                   && device_->mla_ops_type != rtp_llm::MlaOpsType::MHA};
-        params = cache_store_inputs;
+        params = std::move(cache_store_inputs);
     }
     return params;
 }
@@ -378,7 +376,7 @@ GptModelOutputs PyWrappedModel::forward(const GptModelInputs& inputs) {
         std::vector<BufferPtr> kv_cache_block_id_device_by_group;
         if (!inputs.warmup && inputs.pd_separation) {
             attention_inputs.cache_store_inputs = prepareWriteCacheParams(inputs);
-            device_->initCacheStoreWrite();
+            device_->cache_store_async_writer_->init();
         }
         setupKVCacheForAttentionInputs(
             attention_inputs, inputs, kv_cache_block_id_device, &kv_cache_block_id_device_by_group);

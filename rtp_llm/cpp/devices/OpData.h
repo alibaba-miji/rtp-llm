@@ -561,16 +561,16 @@ struct CacheStoreInputs {
     size_t context_batch_size = 0;
     size_t decoder_batch_size = 0;
 
-    BufferPtr                request_id;             // [context_batch_size]
-    BufferPtr                request_pd_separation;  // [context_batch_size]
-    std::vector<std::string> cache_keys;             // [context_batch_size]
-    size_t                   tokens_per_block;
-    size_t                   kv_block_stride_bytes = 0;
-    size_t                   kv_scale_stride_bytes = 0;
-    bool                     pd_separation         = false;
-    size_t                   model_id              = 0;
-    bool                     decode_entrance       = false;
-    bool                     warmup;
+    BufferPtr request_id;             // [context_batch_size]
+    BufferPtr request_pd_separation;  // [context_batch_size]
+    BufferPtr cache_keys;             // int64, [context_batch_size, max_blocks_per_batch]
+    size_t    tokens_per_block;
+    size_t    kv_block_stride_bytes = 0;
+    size_t    kv_scale_stride_bytes = 0;
+    bool      pd_separation         = false;
+    size_t    model_id              = 0;
+    bool      decode_entrance       = false;
+    bool      warmup;
 
     int layer_id = 0;
 };
