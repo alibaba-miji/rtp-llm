@@ -79,7 +79,17 @@ void WriteCacheStoreOp(const torch::Tensor&                         input_length
     auto captured_cache_store            = cache_store_member.value();
     auto captured_kv_cache               = kv_cache.value();
 
-    RTP_LLM_CHECK_WITH_INFO(device->cache_store_async_writer_ != nullptr, "CacheStoreAsyncWriter not initialized");
+    // If async writer is not initialized (no cache store configured), fall back to synchronous path.
+    if (device->cache_store_async_writer_ == nullptr) {
+        runWriteCacheStore(device,
+                           captured_input_lengths,
+                           captured_prefix_lengths,
+                           captured_kv_cache_block_id_host,
+                           captured_cache_store,
+                           captured_kv_cache,
+                           nullptr);
+        return;
+    }
 
     auto event = device->createEvent();
 
